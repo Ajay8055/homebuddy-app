@@ -89,7 +89,7 @@ export default function NotificationCenter({ supabase, session, household, notic
     if(!demo) await supabase.from('notifications').update({read_at:new Date().toISOString(),status:'read'}).eq('id',item.id).eq('user_id',session.user.id);
     setHistory(v=>v.map(x=>x.id===item.id?{...x,read_at:new Date().toISOString(),status:'read'}:x));
     setUnread(v=>Math.max(0,v-(!item.read_at?1:0)));
-    if(item.target_url) window.location.href=item.target_url;
+    if(item.target_url) { const target=new URL(item.target_url,window.location.origin); if(item.entity_id) target.searchParams.set('record',item.entity_id); window.location.href=target.toString(); }
   };
   const markAll = async () => {
     if(!demo) await supabase.from('notifications').update({read_at:new Date().toISOString(),status:'read'}).eq('user_id',session.user.id).is('read_at',null);
