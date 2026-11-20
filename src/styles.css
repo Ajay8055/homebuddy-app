@@ -116,3 +116,5 @@
 .notification-history-row>i{width:8px;height:8px;border-radius:50%;background:#557765;flex-shrink:0}
 .notification-empty{min-height:110px;display:flex;align-items:center;justify-content:center;gap:10px;color:var(--muted,#7b847d);font-size:13px}
 @media(max-width:640px){.notification-card{padding:16px}.notification-card-head{align-items:flex-start;flex-wrap:wrap}.notification-card-head .primary{width:100%}.notification-section-title{align-items:flex-start;flex-wrap:wrap}.notification-grid{grid-template-columns:1fr}}
+
+.listrow.notification-target{outline:2px solid #789b85;outline-offset:3px;border-radius:12px;background:rgba(85,119,101,.07)}
