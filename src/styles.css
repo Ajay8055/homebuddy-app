@@ -20,3 +20,50 @@
   }
   .shade { padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom)); }
 }
+
+/* Mobile quick-add layout: keep the prompt aligned and give the input its own row. */
+@media (max-width:700px) {
+  .quick {
+    display:grid;
+    grid-template-columns:40px minmax(0,1fr);
+    grid-template-areas:"icon copy" "input input" "action action";
+    align-items:center;
+    gap:10px 12px;
+    padding:16px;
+  }
+  .quick>span { grid-area:icon; }
+  .quick>div { grid-area:copy; min-width:0; }
+  .quick b { line-height:1.35; overflow-wrap:normal; word-break:normal; }
+  .quick small { line-height:1.45; }
+  .quick input { grid-area:input; width:100%; min-width:0; margin:0; }
+  .quick>button { grid-area:action; width:100%; min-height:42px; justify-content:center; }
+}
+
+/* Navigation opens as a left-side drawer, not a centered popup. */
+.drawer-shade {
+  position:fixed;
+  inset:0;
+  z-index:30;
+  background:rgba(24,38,29,.42);
+  animation:drawerFade .18s ease-out;
+}
+.side-drawer {
+  position:absolute;
+  inset:0 auto 0 0;
+  width:min(320px, calc(100vw - 52px));
+  max-width:100%;
+  display:flex;
+  flex-direction:column;
+  padding:calc(22px + env(safe-area-inset-top)) 18px calc(20px + env(safe-area-inset-bottom));
+  background:#fff;
+  box-shadow:12px 0 40px rgba(20,35,24,.14);
+  animation:drawerIn .22s ease-out;
+}
+.drawer-head { display:flex; align-items:center; justify-content:space-between; }
+.drawer-head .brand { padding:0; }
+.drawer-close { width:38px; height:38px; display:grid; place-items:center; border:0; border-radius:10px; background:#f2f5f1; color:#627267; }
+.drawer-label { display:block; padding:30px 11px 12px; }
+.side-drawer .nav { width:100%; min-height:46px; }
+.drawer-bottom { margin-top:auto; display:flex; align-items:center; gap:10px; padding:14px; border-radius:12px; background:#f2f5ef; color:#557765; font-size:11px; }
+@keyframes drawerFade { from {opacity:0} to {opacity:1} }
+@keyframes drawerIn { from {transform:translateX(-18px);opacity:.8} to {transform:translateX(0);opacity:1} }
