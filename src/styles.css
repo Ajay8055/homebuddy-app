@@ -8,3 +8,15 @@
 .modal select{width:100%;border:1px solid #e5ebe4;border-radius:8px;padding:11px;font:inherit;font-size:12px;background:white;color:#29382f;outline:none}.modal select:focus{border-color:#8da894}.recurrence-tag{font-size:10px;color:#66836d;background:#edf4ed;border-radius:20px;padding:5px 8px;text-transform:capitalize}
 
 .member-list{margin-top:15px}.member-avatar{width:30px;height:30px;border-radius:50%;background:#edf4ed;color:#557765;display:grid;place-items:center;font-size:11px;font-weight:700}.role-pill{border-radius:20px;background:#edf4ed;color:#557765;padding:5px 9px;font-size:10px;text-transform:capitalize}.member-foot{margin-top:14px}.member-list .listrow{gap:10px}
+
+/* Mobile browser and installed-app ergonomics (iOS + Android). */
+@media (max-width:700px) {
+  .shell { min-height:100svh; padding-bottom:env(safe-area-inset-bottom); }
+  header { padding-top:env(safe-area-inset-top); }
+  .content { padding-bottom:calc(24px + env(safe-area-inset-bottom)); }
+  button { min-height:40px; }
+  .modal input, .modal select, .auth-card input, .quick input, .search input {
+    font-size:16px;
+  }
+  .shade { padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom)); }
+}
