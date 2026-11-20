@@ -46,3 +46,21 @@ test('new feature navigation is available in the mobile drawer', async ({ page, 
   await expect(page.getByRole('button', { name: /Document vault/i }).last()).toBeVisible();
   await expect(page.getByRole('button', { name: /Monthly report/i }).last()).toBeVisible();
 });
+
+
+test('every main section provides a direct route back to the home dashboard', async ({ page }) => {
+  for (const label of ['Reminder centre', 'Family calendar', 'Shopping list', 'Bills & payments', 'Household tasks', 'Maintenance', 'Home assets', 'Shared expenses', 'Document vault', 'Monthly report', 'Personal expenses', 'Family']) {
+    await page.getByRole('button', { name: new RegExp(label, 'i') }).first().click();
+    await expect(page.getByRole('button', { name: 'Back to Home' })).toBeVisible();
+    await page.getByRole('button', { name: 'Back to Home' }).click();
+    await expect(page.getByRole('heading', { name: 'A calmer, more organised home.' })).toBeVisible();
+  }
+});
+
+test('document vault can return home after a document is listed', async ({ page }) => {
+  await page.getByRole('button', { name: /Document vault/i }).first().click();
+  await expect(page.getByRole('heading', { name: 'Family document vault' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Back to Home' })).toBeVisible();
+  await page.getByRole('button', { name: 'Back to Home' }).click();
+  await expect(page.getByRole('heading', { name: 'A calmer, more organised home.' })).toBeVisible();
+});
