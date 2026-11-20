@@ -7,7 +7,7 @@ const supabaseKey=import.meta.env.VITE_SUPABASE_ANON_KEY;
 const supabase=supabaseUrl&&supabaseKey?createClient(supabaseUrl,supabaseKey):null;
 const demoKey='homebuddy-demo-v2';
 const seed={shopping:[{id:'demo-1',name:'Milk',qty:'2 packets',done:false},{id:'demo-2',name:'Bread',qty:'1 pack',done:false}],bills:[{id:'demo-3',name:'Electricity',amount:1850,due:'2026-11-26',paid:false},{id:'demo-4',name:'Wi-Fi',amount:999,due:'2026-11-28',paid:false}],tasks:[{id:'demo-5',name:'Clean kitchen counters',when:'Today',done:false},{id:'demo-6',name:'Water the plants',when:'Tomorrow',done:false}],maintenance:[{id:'demo-7',name:'AC servicing',detail:'Living room AC',when:'2026-12-05'}],events:[],assets:[]};
-const loadDemo=()=>{try{return JSON.parse(localStorage.getItem(demoKey))||seed}catch{return seed}};
+const loadDemo=()=>{try{return {...seed,...(JSON.parse(localStorage.getItem(demoKey))||{})}}catch{return seed}};
 const money=n=>'₹'+Number(n||0).toLocaleString('en-IN');
 const today=()=>new Date().toISOString().slice(0,10);
 const nextDue=(date,frequency)=>{const d=new Date(date+'T00:00:00');if(frequency==='weekly')d.setDate(d.getDate()+7);else if(frequency==='monthly'){const day=d.getDate();d.setDate(1);d.setMonth(d.getMonth()+1);d.setDate(Math.min(day,new Date(d.getFullYear(),d.getMonth()+1,0).getDate()));}else if(frequency==='yearly'){const m=d.getMonth(),day=d.getDate();d.setFullYear(d.getFullYear()+1);if(d.getMonth()!==m)d.setDate(0);}return d.toISOString().slice(0,10)};
