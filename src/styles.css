@@ -118,3 +118,34 @@
 @media(max-width:640px){.notification-card{padding:16px}.notification-card-head{align-items:flex-start;flex-wrap:wrap}.notification-card-head .primary{width:100%}.notification-section-title{align-items:flex-start;flex-wrap:wrap}.notification-grid{grid-template-columns:1fr}}
 
 .listrow.notification-target{outline:2px solid #789b85;outline-offset:3px;border-radius:12px;background:rgba(85,119,101,.07)}
+
+
+/* Family dashboard, expense settlement, reports and document vault */
+.expense-summary{display:grid;grid-template-columns:minmax(0,1fr) minmax(260px,1fr);gap:18px;padding:16px 0 20px;border-bottom:1px solid var(--line)}
+.expense-summary-total{display:flex;flex-direction:column;gap:7px;padding:18px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+.expense-summary-total small,.expense-summary-total span{font-size:11px;color:var(--muted)}
+.expense-summary-total b{font-size:28px;color:var(--text)}
+.settlement-list{display:grid;gap:9px;align-content:start}
+.settlement-list>b{font-size:13px;margin-bottom:3px}
+.settlement-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line);font-size:12px}
+.settlement-row span:nth-child(2){color:var(--muted);font-size:11px}
+.settlement-row strong{grid-column:1/-1;text-align:right;font-size:11px}
+.balance-positive{color:#477b58}.balance-negative{color:#a66a36}
+.expense-summary>.sub{grid-column:1/-1;margin:0}
+.report-total{display:block;font-size:25px;margin-top:12px}
+.report-chip{font-size:11px;color:var(--accent);background:var(--surface);border:1px solid var(--line);padding:8px 12px;border-radius:20px}
+.report-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:18px 0 24px}
+.report-section-title{font-size:15px;margin:22px 0 12px}
+.category-bar{display:grid;grid-template-columns:110px minmax(60px,1fr) 95px;align-items:center;gap:12px;padding:9px 0;font-size:12px}
+.category-bar>div{height:8px;background:var(--surface);border-radius:99px;overflow:hidden}
+.category-bar i{display:block;height:100%;background:var(--accent);border-radius:99px}
+.category-bar b{text-align:right;font-size:12px}
+.report-foot{margin-top:22px}
+.vault-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.vault-actions select{border:1px solid var(--line);border-radius:9px;padding:10px;background:var(--surface);color:var(--text);font:inherit;font-size:12px}
+.upload-button{display:inline-flex;align-items:center;gap:7px;position:relative;overflow:hidden;cursor:pointer}
+.upload-button input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+.vault-note{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;margin:14px 0;border-radius:11px;background:var(--surface);color:var(--muted);font-size:11px;line-height:1.5}
+.vault-note svg{flex-shrink:0;color:var(--accent)}
+.listrow .secondary{width:auto;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 11px}
+@media(max-width:760px){.expense-summary{grid-template-columns:1fr}.report-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.category-bar{grid-template-columns:82px minmax(35px,1fr) 82px;gap:8px}.vault-actions{width:100%}.vault-actions select{flex:1;min-width:110px}.upload-button{flex:1;justify-content:center}.listrow .secondary{padding:8px}.listrow{gap:8px}}
