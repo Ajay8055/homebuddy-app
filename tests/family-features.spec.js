@@ -22,7 +22,7 @@ test('shared expense can be added and appears in household settlement', async ({
   await page.getByRole('button', { name: 'Save' }).click();
   await expect(page.getByText('Automation shared groceries')).toBeVisible();
   await expect(page.getByText('₹1,200').first()).toBeVisible();
-  await expect(page.getByText(/Equal split/)).toBeVisible();
+  await expect(page.getByText('Equal split is an estimate')).toBeVisible();
 });
 
 test('monthly report calculates household spending and activity', async ({ page }) => {
