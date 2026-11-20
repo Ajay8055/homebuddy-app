@@ -61,3 +61,37 @@ self.addEventListener('fetch', (event) => {
     })
   );
 });
+
+
+// Display server-sent Web Push messages while the PWA is in the background or closed.
+self.addEventListener('push', (event) => {
+  let payload = {};
+  try { payload = event.data ? event.data.json() : {}; }
+  catch { payload = { title: 'HomeBuddy', body: event.data?.text() || 'You have a new household update.' }; }
+  const title = payload.title || 'HomeBuddy';
+  const options = {
+    body: payload.body || 'You have a new household update.',
+    icon: '/icon.svg',
+    badge: '/icon.svg',
+    tag: payload.tag || payload.notificationId || 'homebuddy-notification',
+    data: { url: payload.url || '/', notificationId: payload.notificationId || null },
+    renotify: false,
+    timestamp: Date.now()
+  };
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const target = new URL(event.notification.data?.url || '/', self.location.origin).href;
+  event.waitUntil((async () => {
+    const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const client of windows) {
+      if (client.url.startsWith(self.location.origin) && 'focus' in client) {
+        await client.navigate(target);
+        return client.focus();
+      }
+    }
+    return self.clients.openWindow(target);
+  })());
+});
