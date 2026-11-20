@@ -50,6 +50,7 @@ test('reminder form validates required name and saves a task reminder', async ({
   await page.getByPlaceholder(/Give it a name/i).fill('Automation reminder');
   await page.getByLabel('Repeat').selectOption('monthly');
   await page.getByRole('button', { name: 'Save' }).click();
+  await page.getByRole('button', { name: /Household tasks/i }).first().click();
   await expect(page.getByText('Automation reminder')).toBeVisible();
 });
 
