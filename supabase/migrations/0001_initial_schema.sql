@@ -118,3 +118,10 @@ grant select on public.household_members to authenticated;
 grant select, insert, update, delete on public.shopping_items, public.bills, public.household_tasks, public.maintenance_reminders to authenticated;
 grant execute on function public.create_household(text) to authenticated;
 grant execute on function public.join_household(text) to authenticated;
+revoke all on function public.is_household_member(uuid) from public, anon;
+revoke all on function public.create_household(text) from public, anon;
+revoke all on function public.join_household(text) from public, anon;
+grant execute on function public.is_household_member(uuid) to authenticated;
+grant execute on function public.create_household(text) to authenticated;
+grant execute on function public.join_household(text) to authenticated;
+
