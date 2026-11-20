@@ -55,8 +55,7 @@ create table if not exists public.personal_expenses (
   amount numeric(12,2) not null check (amount >= 0),
   category text not null default 'Other',
   expense_date date not null default current_date,
-  created_at timestamptz not null default now(),
-  constraint personal_expenses_creator_matches_session check (user_id = auth.uid())
+  created_at timestamptz not null default now()
 );
 create index if not exists personal_expenses_user_date_idx
   on public.personal_expenses(user_id, expense_date desc);
