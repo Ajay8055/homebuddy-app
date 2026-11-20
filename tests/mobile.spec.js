@@ -6,5 +6,5 @@ test('mobile menu opens and navigates without a blank screen', async ({ page }) 
   await page.getByRole('button', { name: /open menu/i }).click();
   await expect(page.getByRole('button', { name: /Family calendar/i }).last()).toBeVisible();
   await page.getByRole('button', { name: /Family calendar/i }).last().click();
-  await expect(page.getByRole('heading', { name: 'Family calendar' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Family calendar' }).first()).toBeVisible();
 });
