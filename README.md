@@ -66,3 +66,18 @@ See [SUPABASE_SETUP.md](./SUPABASE_SETUP.md) for Supabase configuration and laun
 ## Launch safety
 
 Never place a Supabase service-role key or secret key in frontend environment variables. Before inviting real users, complete the two-account household-sharing and unrelated-account isolation tests on both iOS and Android. Offline mode caches only the app shell and static assets; household data and Supabase actions require a network connection. Hosting and database free tiers have usage limits and are not unlimited.
+
+
+## Notifications
+
+HomeBuddy now includes a notification centre with per-user preferences, device push registration, in-app notification history, and a Supabase scheduled reminder worker.
+
+- Device push uses the Web Push API and VAPID keys. Private VAPID and scheduler secrets are stored in Supabase Vault, not in the browser bundle.
+- Supabase Edge Function: `homebuddy-push`.
+- Supabase Cron invokes the worker every minute.
+- Notification preferences, subscriptions and history are stored in `notification_preferences`, `notification_subscriptions` and `notifications`.
+- Bill, task, event and maintenance reminders are generated server-side. Paid bills and completed tasks are checked again before delivery.
+- Notification rows are user-scoped by RLS. Personal expenses are never included in shared notification payloads.
+- Notification taps deep-link to the relevant HomeBuddy section and record where available.
+
+For iPhone/iPad, install HomeBuddy using Safari → Share → Add to Home Screen, launch it from the Home Screen icon, and then enable notifications inside HomeBuddy. Push support requires a supported iOS/iPadOS version and an installed web app.
