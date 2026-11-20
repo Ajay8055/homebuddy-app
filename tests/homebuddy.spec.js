@@ -25,7 +25,8 @@ test('quick add creates a shopping item and persists after reload', async ({ pag
   const quick = page.getByPlaceholder(/Buy milk, clean the balcony/i);
   await quick.fill('Buy automation test apples');
   await page.getByRole('button', { name: /^Add/ }).last().click();
-  await page.getByRole('button', { name: /Shopping list/i }).click();
+  await expect(page.getByText('Buy automation test apples')).toBeVisible();
+  await page.getByRole('button', { name: /Shopping list/i }).first().click();
   await expect(page.getByText('Buy automation test apples')).toBeVisible();
   await page.reload();
   await page.getByRole('button', { name: /Shopping list/i }).click();
@@ -54,7 +55,7 @@ test('reminder form validates required name and saves a task reminder', async ({
 
 test('mobile menu opens and navigates instead of showing a blank screen', async ({ page, isMobile }) => {
   test.skip(!isMobile, 'Mobile viewport only');
-  await page.getByRole('button', { name: /menu/i }).click();
+  await page.getByRole('button', { name: /open menu/i }).click();
   await expect(page.getByText('Small steps make a happier home.')).toBeVisible();
   await page.getByRole('button', { name: /Family calendar/i }).last().click();
   await expect(page.getByRole('heading', { name: 'Family calendar' })).toBeVisible();
