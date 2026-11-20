@@ -102,7 +102,7 @@ grant execute on function public.remove_household_member(uuid, uuid) to authenti
 create or replace function private.join_household(code text)
 returns uuid language plpgsql security definer
 set search_path = pg_catalog, public
-as $
+as $join$
 declare target_id uuid; member_count integer;
 begin
   if auth.uid() is null then raise exception 'Authentication required'; end if;
@@ -118,7 +118,7 @@ begin
   values (target_id, auth.uid(), 'member') on conflict do nothing;
   return target_id;
 end;
-$;
+$join$;
 
 -- Publish the shared tables and private-expense table for live updates.
 do $$
