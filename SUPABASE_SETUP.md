@@ -59,3 +59,25 @@ Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` to **Production**, **Previe
 ## Free-tier note
 
 The app does not require a paid AI API. Vercel and Supabase have free-tier usage limits and plan conditions; monitor usage and check current provider pricing before public launch. No unlimited-free hosting or database usage is guaranteed.
+
+
+## Push notification infrastructure
+
+The notification system has been provisioned in the production Supabase project:
+
+- Tables: `notification_preferences`, `notification_subscriptions`, `notifications` (RLS enabled).
+- Edge Function: `homebuddy-push` (scheduler requests are protected by a secret header; user test requests validate the signed-in Supabase user).
+- Scheduler: `homebuddy-push-every-minute` using `pg_cron` + `pg_net`.
+- VAPID public/private keys, VAPID subject and scheduler secret are stored in Supabase Vault. Do not add these values to Vercel or expose them in frontend code.
+- No additional Vercel environment variables are required for push; the existing Supabase URL and publishable key are used.
+
+To verify a device:
+1. Sign in to HomeBuddy and open **Reminder centre**.
+2. Choose **Enable notifications** and grant the browser permission.
+3. Allow the app to register this browser/device and send the test push.
+4. Confirm that the device appears as enabled and that the test notification arrives.
+5. Change a notification category or quiet-hours setting and reload to confirm preferences persist.
+
+To verify scheduled delivery, create a shared bill or task with a due date matching one of its reminder offsets. Keep a test device subscribed, wait for the scheduled time, and check the Notification Centre and Supabase Edge Function logs. Test paid/completed cancellation and two separate household accounts before public launch.
+
+For iOS/iPadOS, install the PWA to the Home Screen from Safari and launch it from the installed icon before requesting notification permission. A normal Safari tab is not the installed web-app push experience.
