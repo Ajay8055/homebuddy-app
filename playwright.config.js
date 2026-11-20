@@ -7,7 +7,7 @@ export default defineConfig({
   reporter: process.env.CI ? 'github' : 'list',
   use: { trace: 'retain-on-failure', screenshot: 'only-on-failure', video: 'retain-on-failure' },
   projects: [
-    { name: 'chromium-desktop', testMatch: '**/homebuddy.spec.js', use: { ...devices['Desktop Chrome'], baseURL: 'http://127.0.0.1:5173' } },
+    { name: 'chromium-desktop', testMatch: ['**/homebuddy.spec.js', '**/family-features.spec.js'], use: { ...devices['Desktop Chrome'], baseURL: 'http://127.0.0.1:5173' } },
     { name: 'chromium-mobile', testMatch: '**/mobile.spec.js', use: { ...devices['Pixel 7'], baseURL: 'http://127.0.0.1:5173' } },
   ],
   webServer: {
