@@ -9,6 +9,8 @@ const categories = [
   ['maintenance','Home maintenance','Service and maintenance reminders'],
   ['family_activity','Family activity','Shared household updates']
 ];
+const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const isStandalone = () => window.matchMedia?.('(display-mode: standalone)').matches || window.navigator.standalone === true;
 function applicationKey(value) {
   const padding = '='.repeat((4 - value.length % 4) % 4);
   const raw = atob((value + padding).replace(/-/g, '+').replace(/_/g, '/'));
@@ -22,6 +24,8 @@ export default function NotificationCenter({ supabase, session, household, notic
   const [history,setHistory] = useState([]);
   const [unread,setUnread] = useState(0);
   const [support,setSupport] = useState('Checking this device…');
+  const iosDevice = isIOS();
+  const iosNeedsInstall = iosDevice && !isStandalone();
   const demo = !supabase || !session;
   const refresh = async () => {
     if (demo) { setSupport('Sign in and connect a household to sync notification settings across devices.'); return; }
@@ -50,10 +54,11 @@ export default function NotificationCenter({ supabase, session, household, notic
   };
   const enable = async () => {
     if (!navigator.onLine) { notice('Connect to the internet to set up notifications.'); return; }
+    if (iosNeedsInstall) { notice('On iPhone/iPad, first add HomeBuddy to your Home Screen: tap Share → Add to Home Screen, then open HomeBuddy from its new app icon and tap Enable notifications again.'); return; }
     if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
       setPermission('unsupported'); notice('Push notifications are not supported by this browser.'); return;
     }
-    if (Notification.permission === 'denied') { setPermission('denied'); notice('Notifications are blocked. Enable them in your browser or device settings, then return here.'); return; }
+    if (Notification.permission === 'denied') { setPermission('denied'); notice(iosDevice ? 'Notifications are blocked for HomeBuddy. Open iPhone Settings → Notifications → HomeBuddy and turn on Allow Notifications. If HomeBuddy is missing, open it from the Home Screen first.' : 'Notifications are blocked for HomeBuddy. Open the site settings from your browser address bar, set Notifications to Allow, then return and refresh HomeBuddy.'); return; }
     setBusy(true);
     try {
       let current=Notification.permission;
@@ -96,13 +101,14 @@ export default function NotificationCenter({ supabase, session, household, notic
     setHistory(v=>v.map(x=>({...x,read_at:x.read_at||new Date().toISOString(),status:'read'}))); setUnread(0);
   };
   const toggleCategory = key => savePrefs({categories:{...prefs.categories,[key]:!prefs.categories[key]}});
-  const statusText = permission==='granted' ? (subscription?'Push enabled on this device':'Permission granted · device registration needed') : permission==='denied'?'Blocked in browser/device settings':permission==='unsupported'?'Not supported in this browser':'Not enabled yet';
+  const statusText = permission==='granted' ? (subscription?'Push enabled on this device':'Permission granted · device registration needed') : permission==='denied'?'Blocked in browser/device settings':permission==='unsupported'?'Not supported in this browser':iosNeedsInstall?'Add HomeBuddy to your Home Screen first':'Not enabled yet';
   return <div className="notification-centre">
     <section className="notification-card">
-      <div className="notification-card-head"><div className="notification-symbol"><BellRing size={21}/></div><div className="notification-card-copy"><b>Device notifications</b><small>{statusText}</small></div><button className="primary" onClick={enable} disabled={busy||permission==='denied'&&false}>{busy?'Setting up…':permission==='granted'&&subscription?'Enabled':'Enable notifications'}</button></div>
+      <div className="notification-card-head"><div className="notification-symbol"><BellRing size={21}/></div><div className="notification-card-copy"><b>Device notifications</b><small>{statusText}</small></div><button className="primary" onClick={enable} disabled={busy||permission==='unsupported'&&!iosNeedsInstall}>{busy?'Setting up…':permission==='granted'&&subscription?'Enabled':iosNeedsInstall?'Install HomeBuddy first':'Enable notifications'}</button></div>
       <p className="notification-support">{support}</p>
-      {permission==='denied'&&<p className="notification-help">To change this, open your browser's site settings, allow notifications for HomeBuddy, then come back and refresh.</p>}
-      {permission==='unsupported'&&<p className="notification-help">Use a supported browser. On iPhone/iPad, install HomeBuddy on the Home Screen and open it from its app icon before enabling push.</p>}
+      {iosNeedsInstall&&<p className="notification-help">iPhone/iPad requires HomeBuddy to be installed on your Home Screen before web push can be enabled. In Safari, tap Share → Add to Home Screen. Then launch HomeBuddy from the new icon and tap Enable notifications. Push requires iOS/iPadOS 16.4 or later.</p>}
+      {permission==='denied'&&<p className="notification-help">{iosDevice?'On iPhone/iPad, open Settings → Notifications → HomeBuddy and turn on Allow Notifications. If HomeBuddy does not appear, launch the installed Home Screen app and try again.':'Open the site settings from your browser address bar, set Notifications to Allow, then return to HomeBuddy and refresh.'}</p>}
+      {permission==='unsupported'&&!iosNeedsInstall&&<p className="notification-help">This browser or device does not support web push. On iPhone/iPad, use iOS/iPadOS 16.4 or later, add HomeBuddy to the Home Screen from Safari, and open it from its icon.</p>}
     </section>
     <section className="notification-card">
       <div className="notification-section-title"><div><h2>Notification preferences</h2><p>Choose which household updates reach this device.</p></div><label className="notification-toggle"><input type="checkbox" checked={prefs.enabled} onChange={e=>savePrefs({enabled:e.target.checked})}/><span>All notifications</span></label></div>
