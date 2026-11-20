@@ -97,6 +97,29 @@ $$;
 revoke all on function public.remove_household_member(uuid, uuid) from public, anon;
 grant execute on function public.remove_household_member(uuid, uuid) to authenticated;
 
+
+-- Enforce a five-person household limit while serializing concurrent joins.
+create or replace function private.join_household(code text)
+returns uuid language plpgsql security definer
+set search_path = pg_catalog, public
+as $
+declare target_id uuid; member_count integer;
+begin
+  if auth.uid() is null then raise exception 'Authentication required'; end if;
+  if char_length(trim(code)) not between 6 and 20 then raise exception 'Invalid household invite code'; end if;
+  select id into target_id from public.households where invite_code = lower(trim(code)) for update;
+  if target_id is null then raise exception 'Invalid household invite code'; end if;
+  if exists (select 1 from public.household_members where household_id = target_id and user_id = auth.uid()) then
+    return target_id;
+  end if;
+  select count(*) into member_count from public.household_members where household_id = target_id;
+  if member_count >= 5 then raise exception 'This household already has five members'; end if;
+  insert into public.household_members(household_id, user_id, role)
+  values (target_id, auth.uid(), 'member') on conflict do nothing;
+  return target_id;
+end;
+$;
+
 -- Publish the shared tables and private-expense table for live updates.
 do $$
 declare t text;
