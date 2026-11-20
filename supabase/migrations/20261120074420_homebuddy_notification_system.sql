@@ -106,26 +106,49 @@ begin
   from candidates on conflict(dedupe_key) do nothing;
   get diagnostics n = row_count; inserted_count := inserted_count+n;
 
-  -- Calendar event reminders at 1 day and 1 hour before the event.
+  -- Calendar reminders: one-off events plus weekly, monthly and yearly recurrences.
   with recipients as (
     select hm.user_id,hm.household_id,coalesce(np.timezone,'Asia/Kolkata') tz,
       coalesce((np.categories->>'calendar')::boolean,true) enabled
     from public.household_members hm left join public.notification_preferences np on np.user_id=hm.user_id
     where coalesce(np.enabled,true)
-  ), candidates as (
-    select r.user_id,r.household_id,e.id,e.title,e.starts_at,offsets.mins,
-      e.starts_at - make_interval(mins=>offsets.mins) scheduled
+  ), occurrences as (
+    select r.user_id,r.household_id,r.tz,e.id,e.title,e.recurrence_frequency,
+      case
+        when e.recurrence_frequency='yearly' then
+          (e.starts_at + make_interval(years=>greatest(0,extract(year from (now() at time zone r.tz))::int-extract(year from (e.starts_at at time zone r.tz))::int)))
+        when e.recurrence_frequency='monthly' then
+          (e.starts_at + make_interval(months=>greatest(0,
+            (extract(year from (now() at time zone r.tz))::int-extract(year from (e.starts_at at time zone r.tz))::int)*12
+            + extract(month from (now() at time zone r.tz))::int-extract(month from (e.starts_at at time zone r.tz))::int)))
+        when e.recurrence_frequency='weekly' then
+          (e.starts_at + make_interval(weeks=>greatest(0,floor(extract(epoch from (now()-e.starts_at))/604800)::int)))
+        else e.starts_at
+      end first_occurrence
     from recipients r join public.household_events e on e.household_id=r.household_id
-    cross join (values (1440),(60)) offsets(mins)
-    where r.enabled and e.starts_at > now()
-      and e.starts_at - make_interval(mins=>offsets.mins) <= now() + interval '1 minute'
-      and e.starts_at - make_interval(mins=>offsets.mins) > now() - interval '1 minute'
+    where r.enabled
+  ), next_occurrences as (
+    select *,case
+      when first_occurrence > now() then first_occurrence
+      when recurrence_frequency='yearly' then first_occurrence + interval '1 year'
+      when recurrence_frequency='monthly' then first_occurrence + interval '1 month'
+      when recurrence_frequency='weekly' then first_occurrence + interval '1 week'
+      else first_occurrence
+    end occurrence
+    from occurrences
+  ), candidates as (
+    select n.user_id,n.household_id,n.id,n.title,n.occurrence,offsets.mins,
+      n.occurrence - make_interval(mins=>offsets.mins) scheduled,n.tz
+    from next_occurrences n cross join (values (1440),(60)) offsets(mins)
+    where n.occurrence > now()
+      and n.occurrence - make_interval(mins=>offsets.mins) <= now() + interval '1 minute'
+      and n.occurrence - make_interval(mins=>offsets.mins) > now() - interval '1 minute'
   )
   insert into public.notifications(user_id,household_id,category,title,body,target_url,entity_type,entity_id,scheduled_for,dedupe_key)
   select user_id,household_id,'calendar','Upcoming event: '||title,
     title||' starts in '||case when mins=60 then '1 hour.' else '1 day.' end,
     '/?page=calendar','event',id,scheduled,
-    'event:'||id::text||':'||mins::text||':'||user_id::text
+    'event:'||id::text||':'||to_char(occurrence at time zone tz,'YYYY-MM-DD')||':'||mins::text||':'||user_id::text
   from candidates on conflict(dedupe_key) do nothing;
   get diagnostics n = row_count; inserted_count := inserted_count+n;
 
