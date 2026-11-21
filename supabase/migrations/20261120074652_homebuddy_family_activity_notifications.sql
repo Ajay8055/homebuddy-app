@@ -42,7 +42,7 @@ begin
     and (kind<>'task' or tg_op<>'INSERT' or target_user is null or hm.user_id=target_user or hm.role='owner');
   return new;
 end;
-$function$
+$function$;
 CREATE OR REPLACE FUNCTION public.notification_secrets()
  RETURNS jsonb
  LANGUAGE sql
@@ -52,7 +52,7 @@ AS $function$
   select jsonb_object_agg(name, decrypted_secret)
   from vault.decrypted_secrets
   where name in ('homebuddy_vapid_private','homebuddy_vapid_public','homebuddy_vapid_subject','homebuddy_cron_secret');
-$function$
+$function$;
 drop trigger if exists notify_bill_activity_insert on public.bills;
 create trigger notify_bill_activity_insert after insert on public.bills for each row execute function public.notify_household_activity();
 drop trigger if exists notify_bill_paid_activity on public.bills;
