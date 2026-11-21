@@ -34,6 +34,8 @@ jobs:
         run: npm install
       - name: Generate native Android project
         run: CI=1 npx expo prebuild --platform android
+      - name: Bundle native JavaScript for Android
+        run: npx expo export --platform android --output-dir dist-android
       - name: Build installable debug APK
         run: |
           cd android
