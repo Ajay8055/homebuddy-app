@@ -1,119 +1,91 @@
 import 'react-native-url-polyfill/auto';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TextInput, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
-const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey, {
-  auth: { storage: AsyncStorage, autoRefreshToken: true, persistSession: true, detectSessionInUrl: false }
-}) : null;
-
-const colors = { bg:'#F7F8F4', ink:'#29382F', muted:'#7D8A80', green:'#557765', pale:'#EAF0E9', white:'#FFFFFF', line:'#E6EBE4', red:'#B64A43' };
-const sections = [
-  ['overview','Overview','Your household at a glance'],
-  ['shopping_items','Shopping list','Shared shopping'],
-  ['bills','Bills & payments','Due dates and payments'],
-  ['household_tasks','Household tasks','Chores and assignments'],
-  ['maintenance_reminders','Maintenance','Home care and servicing'],
-  ['household_events','Family calendar','Events and important dates'],
-  ['home_assets','Home assets','Appliances and warranties'],
-  ['shared_expenses','Shared expenses','Household spending'],
-  ['household_documents','Document vault','Important family documents'],
-  ['personal_expenses','Personal expenses','Private to your account'],
+const url=process.env.EXPO_PUBLIC_SUPABASE_URL, key=process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+const supabase=url&&key?createClient(url,key,{auth:{storage:AsyncStorage,autoRefreshToken:true,persistSession:true,detectSessionInUrl:false}}):null;
+const C={bg:'#F7F8F4',ink:'#29382F',muted:'#7D8A80',green:'#557765',pale:'#EAF0E9',white:'#FFFFFF',line:'#E6EBE4',red:'#B64A43'};
+const sections=[
+ ['overview','Overview','Your household at a glance'],
+ ['shopping_items','Shopping list','Shared shopping'],
+ ['bills','Bills & payments','Due dates and payments'],
+ ['household_tasks','Household tasks','Chores and assignments'],
+ ['maintenance_reminders','Maintenance','Home care and servicing'],
+ ['household_events','Family calendar','Events and important dates'],
+ ['home_assets','Home assets','Appliances and warranties'],
+ ['shared_expenses','Shared expenses','Household spending'],
+ ['household_documents','Document vault','Important family documents'],
+ ['personal_expenses','Personal expenses','Private to your account'],
+ ['family','Family & settings','Members, invite code and household settings']
 ];
-const tableFor = { shopping_items:'shopping_items', bills:'bills', household_tasks:'household_tasks', maintenance_reminders:'maintenance_reminders', household_events:'household_events', home_assets:'home_assets', shared_expenses:'shared_expenses', household_documents:'household_documents', personal_expenses:'personal_expenses' };
-
-function PrimaryButton({ title, onPress, disabled }) {
-  return <Pressable accessibilityRole="button" onPress={onPress} disabled={disabled} style={({pressed})=>[styles.primary,disabled&&{opacity:.55},pressed&&{opacity:.8}]}><Text style={styles.primaryText}>{title}</Text></Pressable>;
+const configs={
+ shopping_items:{table:'shopping_items',fields:[['name','Item name'],['quantity','Quantity']],defaults:{is_done:false},title:'Shopping item'},
+ bills:{table:'bills',fields:[['name','Bill name'],['amount','Amount (₹)'],['due_date','Due date (YYYY-MM-DD)']],defaults:{is_paid:false,recurrence_frequency:'none'},title:'Bill'},
+ household_tasks:{table:'household_tasks',fields:[['name','Task name'],['due_label','When (e.g. Today)'],['due_date','Due date (YYYY-MM-DD)'],['description','Description']],defaults:{is_done:false,priority:'normal',recurrence_frequency:'none'},title:'Task'},
+ maintenance_reminders:{table:'maintenance_reminders',fields:[['name','Service / reminder'],['details','Details'],['service_date','Service date (YYYY-MM-DD)']],defaults:{recurrence_frequency:'none'},title:'Maintenance reminder'},
+ household_events:{table:'household_events',fields:[['title','Event name'],['description','Details'],['starts_at','Date (YYYY-MM-DD)']],defaults:{all_day:true,recurrence_frequency:'none'},title:'Family event'},
+ home_assets:{table:'home_assets',fields:[['name','Asset name'],['category','Category'],['brand_model','Brand / model'],['purchase_date','Purchase date (YYYY-MM-DD)'],['warranty_until','Warranty until (YYYY-MM-DD)'],['notes','Notes']],defaults:{},title:'Home asset'},
+ shared_expenses:{table:'shared_expenses',fields:[['name','Expense name'],['amount','Amount (₹)'],['category','Category'],['expense_date','Date (YYYY-MM-DD)'],['notes','Notes']],defaults:{},title:'Shared expense'},
+ personal_expenses:{table:'personal_expenses',fields:[['name','Expense name'],['amount','Amount (₹)'],['category','Category'],['expense_date','Date (YYYY-MM-DD)']],defaults:{},title:'Personal expense'}
+};
+const dateToday=()=>new Date().toISOString().slice(0,10);
+function Button({title,onPress,secondary=false,danger=false,disabled=false}){return <Pressable accessibilityRole="button" onPress={onPress} disabled={disabled} style={({pressed})=>[s.button,secondary&&s.secondary,danger&&s.danger,disabled&&{opacity:.5},pressed&&{opacity:.8}]}><Text style={[s.buttonText,secondary&&s.secondaryText,danger&&s.dangerText]}>{title}</Text></Pressable>}
+function Field({label,value,onChangeText,keyboardType='default',multiline=false}){return <View style={s.field}><Text style={s.label}>{label}</Text><TextInput value={value} onChangeText={onChangeText} placeholder={label} placeholderTextColor="#A0AAA1" keyboardType={keyboardType} multiline={multiline} style={[s.input,multiline&&{minHeight:76,textAlignVertical:'top'}]}/></View>}
+export default function App(){
+ const [session,setSession]=useState(null),[ready,setReady]=useState(false),[email,setEmail]=useState(''),[password,setPassword]=useState(''),[signup,setSignup]=useState(false),[busy,setBusy]=useState(false);
+ const [household,setHousehold]=useState(null),[houseName,setHouseName]=useState('My household'),[invite,setInvite]=useState(''),[members,setMembers]=useState([]);
+ const [active,setActive]=useState('overview'),[rows,setRows]=useState([]),[counts,setCounts]=useState({}),[form,setForm]=useState(null),[values,setValues]=useState({}),[refreshing,setRefreshing]=useState(false);
+ useEffect(()=>{if(!supabase){setReady(true);return}supabase.auth.getSession().then(({data})=>{setSession(data.session);setReady(true)});const {data:{subscription}}=supabase.auth.onAuthStateChange((_e,v)=>setSession(v));return()=>subscription.unsubscribe()},[]);
+ const loadHome=useCallback(async()=>{
+  if(!session||!supabase){setHousehold(null);return}
+  const {data:m,error}=await supabase.from('household_members').select('household_id,role').eq('user_id',session.user.id).limit(1);
+  if(error){Alert.alert('Household error',error.message);return}
+  if(!m?.length){setHousehold(null);return}
+  const [{data:h,error:he},{data:roster,error:re}]=await Promise.all([supabase.from('households').select('id,name,invite_code,status').eq('id',m[0].household_id).single(),supabase.rpc('get_household_members')]);
+  if(he){Alert.alert('Household error',he.message);return}
+  setHousehold({...h,role:m[0].role});setMembers(roster||[]);if(re)console.warn(re.message);
+ },[session]);
+ useEffect(()=>{loadHome()},[loadHome]);
+ const loadRows=useCallback(async()=>{
+  if(!session||!household||!supabase)return;
+  setRefreshing(true);
+  const pairs=await Promise.all(Object.entries(configs).map(async([k,c])=>{
+   let q=supabase.from(c.table).select('*').eq('household_id',household.id).order('created_at',{ascending:false}).limit(100);
+   if(k==='personal_expenses')q=q.eq('user_id',session.user.id);
+   const {data,error}=await q;return [k,error?[]:(data||[])];
+  }));
+  setCounts(Object.fromEntries(pairs.map(([k,v])=>[k,v.length])));
+  setRows(Object.fromEntries(pairs));setRefreshing(false);
+ },[session,household]);
+ useEffect(()=>{loadRows()},[loadRows]);
+ useEffect(()=>{if(!household||!supabase)return;const ch=supabase.channel('native-home-'+household.id).on('postgres_changes',{event:'*',schema:'public',table:'shopping_items',filter:'household_id=eq.'+household.id},loadRows).on('postgres_changes',{event:'*',schema:'public',table:'bills',filter:'household_id=eq.'+household.id},loadRows).on('postgres_changes',{event:'*',schema:'public',table:'household_tasks',filter:'household_id=eq.'+household.id},loadRows).subscribe();return()=>{supabase.removeChannel(ch)}},[household,loadRows]);
+ const auth=async()=>{if(!supabase){Alert.alert('Setup required','Configure mobile/.env with the Supabase URL and anon/publishable key.');return}setBusy(true);const result=signup?await supabase.auth.signUp({email:email.trim(),password}):await supabase.auth.signInWithPassword({email:email.trim(),password});setBusy(false);if(result.error)Alert.alert('Authentication failed',result.error.message);else if(signup&&!result.data.session)Alert.alert('Account created','Check your email to confirm your account, then sign in.')};
+ const createHouse=async()=>{if(!houseName.trim())return Alert.alert('Enter a household name');setBusy(true);const {error}=await supabase.rpc('create_household',{household_name:houseName.trim()});setBusy(false);if(error)Alert.alert('Could not create household',error.message);else loadHome()};
+ const joinHouse=async()=>{if(!invite.trim())return Alert.alert('Enter invite code');setBusy(true);const {error}=await supabase.rpc('join_household',{code:invite.trim()});setBusy(false);if(error)Alert.alert('Could not join household',error.message);else loadHome()};
+ const openCreate=()=>{if(active==='household_documents')return Alert.alert('Document vault','Native file picker and secure upload are in the next implementation step.');const c=configs[active];if(!c)return;const initial={};c.fields.forEach(([k])=>initial[k]=k.endsWith('_date')||k==='starts_at'?dateToday():'');setValues(initial);setForm('create')};
+ const save=async()=>{const c=configs[active];if(!c||!values.name&&!values.title)return Alert.alert('Required','Please enter a name.');const payload={household_id:household.id,...c.defaults,...values};if(active==='personal_expenses')payload.user_id=session.user.id;if(['bills','shared_expenses','personal_expenses'].includes(active))payload.amount=Number(payload.amount||0);if(active==='shared_expenses')payload.paid_by=session.user.id;
+ setBusy(true);const {error}=await supabase.from(c.table).insert(payload);setBusy(false);if(error)Alert.alert('Could not save',error.message);else{setForm(null);loadRows()}};
+ const remove=record=>Alert.alert('Delete item?','This cannot be undone.',[{text:'Cancel',style:'cancel'},{text:'Delete',style:'destructive',onPress:async()=>{const c=configs[active];let q=supabase.from(c.table).delete().eq('id',record.id);q=active==='personal_expenses'?q.eq('user_id',session.user.id):q.eq('household_id',household.id);const {error}=await q;if(error)Alert.alert('Delete failed',error.message);else loadRows()}}]);
+ const toggle=async(record)=>{const c=configs[active];const col=active==='bills'?'is_paid':'is_done';const val=!(record[col]||false);const {error}=await supabase.from(c.table).update({[col]:val,...(active==='bills'?{paid_at:val?new Date().toISOString():null}:{completed_at:val?new Date().toISOString():null})}).eq('id',record.id).eq('household_id',household.id);if(error)Alert.alert('Update failed',error.message);else loadRows()};
+ const signOut=async()=>{await supabase?.auth.signOut();setHousehold(null);setRows([]);setCounts({})};
+ if(!ready)return <View style={s.center}><ActivityIndicator color={C.green}/><Text style={s.muted}>Loading HomeBuddy…</Text></View>;
+ if(!session)return <SafeAreaView style={s.safe}><StatusBar barStyle="dark-content" backgroundColor={C.bg}/><KeyboardAvoidingView style={s.flex} behavior={Platform.OS==='ios'?'padding':undefined}><ScrollView contentContainerStyle={s.authWrap}><View style={s.logo}><Text style={s.logoText}>H</Text></View><Text style={s.brand}>HomeBuddy</Text><Text style={s.tagline}>One app. Every household. Everything organised.</Text><View style={s.panel}><Text style={s.heading}>{signup?'Create your account':'Welcome home'}</Text><Field label="Email address" value={email} onChangeText={setEmail}/><Field label="Password (8+ characters)" value={password} onChangeText={setPassword}/><Button title={busy?'Please wait…':signup?'Create account':'Sign in'} onPress={auth} disabled={busy}/><Pressable onPress={()=>setSignup(!signup)}><Text style={s.link}>{signup?'Already registered? Sign in':'New to HomeBuddy? Create account'}</Text></Pressable></View></ScrollView></KeyboardAvoidingView></SafeAreaView>;
+ if(!household)return <SafeAreaView style={s.safe}><ScrollView contentContainerStyle={s.authWrap}><Text style={s.brand}>HomeBuddy</Text><Text style={s.heading}>Set up your household</Text><Text style={s.muted}>Create a shared home or join your family with an invite code.</Text><View style={s.panel}><Field label="Household name" value={houseName} onChangeText={setHouseName}/><Button title="Create household" onPress={createHouse} disabled={busy}/><View style={s.separator}/><Field label="Invite code" value={invite} onChangeText={setInvite}/><Button title="Join household" onPress={joinHouse} disabled={busy} secondary/><Button title="Sign out" onPress={signOut} secondary/></View></ScrollView></SafeAreaView>;
+ const section=sections.find(x=>x[0]===active)||sections[0];
+ return <SafeAreaView style={s.safe}><StatusBar barStyle="dark-content" backgroundColor={C.bg}/><View style={s.topbar}><View><Text style={s.brandSmall}>HomeBuddy</Text><Text style={s.mutedSmall}>{household.name}</Text></View><Pressable onPress={signOut}><Text style={s.link}>Sign out</Text></Pressable></View>
+ <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.tabs}>{sections.map(x=><Pressable key={x[0]} onPress={()=>{setActive(x[0]);setForm(null)}} style={[s.tab,active===x[0]&&s.tabActive]}><Text style={[s.tabText,active===x[0]&&s.tabTextActive]}>{x[1]}</Text></Pressable>)}</ScrollView>
+ <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled"><View style={s.hero}><Text style={s.eyebrow}>YOUR HOUSEHOLD</Text><Text style={s.heroTitle}>{household.name}</Text><Text style={s.heroSub}>{members.length} {members.length===1?'member':'members'} · {household.role}</Text></View>
+ <View style={s.headingRow}><View style={{flex:1}}><Text style={s.sectionTitle}>{section[1]}</Text><Text style={s.muted}>{section[2]}</Text></View>{active!=='overview'&&active!=='family'&&active!=='household_documents'&&<Button title="+ Add" onPress={openCreate}/>}</View>
+ {active==='overview'&&<View style={s.grid}>{sections.slice(1,-1).map(x=><Pressable key={x[0]} onPress={()=>setActive(x[0])} style={s.tile}><Text style={s.tileCount}>{counts[x[0]]??0}</Text><Text style={s.tileTitle}>{x[1]}</Text><Text style={s.tileSub}>{x[2]}</Text></Pressable>)}<Pressable onPress={()=>setActive('family')} style={s.tile}><Text style={s.tileCount}>{members.length}</Text><Text style={s.tileTitle}>Family & settings</Text><Text style={s.tileSub}>Members and household settings</Text></Pressable></View>}
+ {active==='family'&&<View style={s.panel}><Text style={s.heading}>Household details</Text><Text style={s.muted}>Invite code</Text><Text selectable style={s.code}>{household.invite_code||'Unavailable'}</Text><Text style={s.muted}>Share this code with family members so they can join.</Text><View style={s.separator}/><Text style={s.heading}>Members ({members.length})</Text>{members.map((m,i)=><View key={m.user_id||i} style={s.record}><Text style={s.recordTitle}>{m.display_name||m.email||'Family member'}</Text><Text style={s.muted}>{m.role||'member'}</Text></View>)}<Text style={s.muted}>Household ownership transfer, archive and deletion controls will be added after native permission and confirmation flows are migrated.</Text></View>}
+ {active==='household_documents'&&<View style={s.panel}><Text style={s.heading}>Document vault</Text><Text style={s.muted}>The native secure document picker, camera capture, upload and download experience is being implemented. Existing documents remain safely stored in Supabase.</Text></View>}
+ {active!=='overview'&&active!=='family'&&active!=='household_documents'&&<>{form==='create'&&<View style={s.panel}><Text style={s.heading}>Add {configs[active]?.title}</Text>{configs[active]?.fields.map(([k,label])=><Field key={k} label={label} value={values[k]||''} onChangeText={v=>setValues(p=>({...p,[k]:v}))} keyboardType={k==='amount'?'decimal-pad':'default'} multiline={k==='notes'||k==='description'}/>) }<Button title={busy?'Saving…':'Save'} onPress={save} disabled={busy}/><Button title="Cancel" onPress={()=>setForm(null)} secondary/></View>}
+ {refreshing&&<ActivityIndicator color={C.green}/>} {(rows[active]||[]).length===0&&form!=='create'&&<View style={s.panel}><Text style={s.heading}>Nothing here yet</Text><Text style={s.muted}>Add your first {configs[active]?.title?.toLowerCase()||'item'} to get started.</Text></View>}
+ {(rows[active]||[]).map(r=><View key={r.id} style={s.record}><View style={{flex:1}}><Text style={s.recordTitle}>{r.name||r.title||'Untitled'}</Text><Text style={s.muted}>{r.amount!=null?'₹'+Number(r.amount).toLocaleString('en-IN')+' · ':''}{r.due_date||r.expense_date||r.service_date||r.starts_at||r.purchase_date||''}{r.quantity?' · '+r.quantity:''}{r.is_paid?' · Paid':''}{r.is_done?' · Completed':''}</Text>{r.description||r.notes?<Text style={s.muted}>{r.description||r.notes}</Text>:null}</View>{(active==='bills'||active==='household_tasks'||active==='shopping_items')&&<Pressable onPress={()=>toggle(r)} style={s.smallAction}><Text style={s.smallActionText}>{active==='bills'?(r.is_paid?'Undo':'Paid'):(r.is_done?'Undo':'Done')}</Text></Pressable>}<Pressable onPress={()=>remove(r)} style={s.delete}><Text style={s.deleteText}>Delete</Text></Pressable></View>)}</>}
+ </ScrollView></SafeAreaView>;
 }
-function Field({ label, value, onChangeText, placeholder, secureTextEntry, keyboardType='default', autoCapitalize='none' }) {
-  return <View style={styles.field}><Text style={styles.label}>{label}</Text><TextInput value={value} onChangeText={onChangeText} placeholder={placeholder} placeholderTextColor="#A0AAA1" secureTextEntry={secureTextEntry} keyboardType={keyboardType} autoCapitalize={autoCapitalize} style={styles.input}/></View>;
-}
-
-export default function App() {
-  const [session,setSession] = useState(null);
-  const [authReady,setAuthReady] = useState(false);
-  const [email,setEmail] = useState('');
-  const [password,setPassword] = useState('');
-  const [busy,setBusy] = useState(false);
-  const [household,setHousehold] = useState(null);
-  const [counts,setCounts] = useState({});
-  const [active,setActive] = useState('overview');
-  const [memberCount,setMemberCount] = useState(0);
-  const [houseName,setHouseName] = useState('');
-
-  useEffect(() => {
-    if (!supabase) { setAuthReady(true); return; }
-    supabase.auth.getSession().then(({data})=>{setSession(data.session);setAuthReady(true);});
-    const {data:{subscription}}=supabase.auth.onAuthStateChange((_event,next)=>setSession(next));
-    return ()=>subscription.unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    let alive=true;
-    async function loadHome() {
-      if (!session || !supabase) { setHousehold(null); return; }
-      const {data:membership,error}=await supabase.from('household_members').select('household_id,role').eq('user_id',session.user.id).limit(1);
-      if (!alive) return;
-      if (error) { Alert.alert('Could not load household',error.message); return; }
-      if (!membership?.length) { setHousehold(null); return; }
-      const id=membership[0].household_id;
-      const [{data:home,error:homeError},{data:roster,error:rosterError}]=await Promise.all([
-        supabase.from('households').select('id,name,invite_code,status').eq('id',id).single(),
-        supabase.rpc('get_household_members')
-      ]);
-      if (!alive) return;
-      if (homeError) { Alert.alert('Could not load household',homeError.message); return; }
-      setHousehold({...home,role:membership[0].role});
-      setHouseName(home.name);
-      setMemberCount(roster?.length||0);
-      if (rosterError) console.warn(rosterError.message);
-      const pairs=await Promise.all(Object.entries(tableFor).map(async ([key,table])=>{
-        let q=supabase.from(table).select('id',{count:'exact',head:true}).eq('household_id',id);
-        if(key==='personal_expenses') q=q.eq('user_id',session.user.id);
-        const {count,error}=await q;
-        return [key,error?0:(count||0)];
-      }));
-      if (alive) setCounts(Object.fromEntries(pairs));
-    }
-    loadHome();
-    return ()=>{alive=false;};
-  },[session]);
-
-  const signIn = async () => {
-    if (!supabase) return Alert.alert('Setup required','Add the Supabase URL and anon/publishable key in mobile/.env before running the app.');
-    if (!email.trim() || !password) return Alert.alert('Missing details','Enter your email and password.');
-    setBusy(true);
-    const {error}=await supabase.auth.signInWithPassword({email:email.trim(),password});
-    setBusy(false);
-    if(error) Alert.alert('Sign in failed',error.message);
-  };
-  const signUp = async () => {
-    if (!supabase) return Alert.alert('Setup required','Configure the Supabase environment variables first.');
-    if (!email.trim() || password.length<8) return Alert.alert('Check details','Enter a valid email and a password with at least 8 characters.');
-    setBusy(true);
-    const {error}=await supabase.auth.signUp({email:email.trim(),password});
-    setBusy(false);
-    if(error) Alert.alert('Sign up failed',error.message);
-    else Alert.alert('Account created','Check your email if email confirmation is enabled, then sign in.');
-  };
-  const signOut = async () => { await supabase?.auth.signOut(); setHousehold(null); setCounts({}); };
-  const activeSection=sections.find(s=>s[0]===active)||sections[0];
-
-  if (!authReady) return <View style={styles.center}><ActivityIndicator size="large" color={colors.green}/><Text style={styles.muted}>Loading HomeBuddy…</Text></View>;
-  if (!session) return <SafeAreaView style={styles.safe}><StatusBar barStyle="dark-content" backgroundColor={colors.bg}/><KeyboardAvoidingView style={styles.flex} behavior={Platform.OS==='ios'?'padding':undefined}><ScrollView contentContainerStyle={styles.authWrap} keyboardShouldPersistTaps="handled"><View style={styles.brandIcon}><Text style={styles.brandIconText}>H</Text></View><Text style={styles.brand}>HomeBuddy</Text><Text style={styles.tagline}>One app. Every household. Everything organised.</Text><View style={styles.panel}><Text style={styles.heading}>Welcome home</Text><Text style={styles.muted}>Sign in to access your shared household.</Text><Field label="Email" value={email} onChangeText={setEmail} placeholder="you@example.com" keyboardType="email-address"/><Field label="Password" value={password} onChangeText={setPassword} placeholder="Your password" secureTextEntry/><PrimaryButton title={busy?'Please wait…':'Sign in'} onPress={signIn} disabled={busy}/><Pressable onPress={signUp} style={styles.textButton}><Text style={styles.link}>New to HomeBuddy? Create account</Text></Pressable></View><Text style={styles.footer}>Your household data stays protected by your existing Supabase account and database policies.</Text></ScrollView></KeyboardAvoidingView></SafeAreaView>;
-
-  return <SafeAreaView style={styles.safe}><StatusBar barStyle="dark-content" backgroundColor={colors.bg}/><View style={styles.topbar}><View><Text style={styles.brandSmall}>HomeBuddy</Text><Text style={styles.mutedSmall}>{household?.name||'Your home'}</Text></View><Pressable onPress={signOut}><Text style={styles.link}>Sign out</Text></Pressable></View>
-    {!household ? <View style={styles.empty}><Text style={styles.heading}>Let’s set up your home</Text><Text style={styles.muted}>You’re signed in, but this account is not linked to a household yet. Household creation and invite-code joining are part of the next migration milestone.</Text></View> :
-    <ScrollView contentContainerStyle={styles.content}><View style={styles.hero}><Text style={styles.eyebrow}>YOUR HOUSEHOLD</Text><Text style={styles.heroTitle}>{household.name}</Text><Text style={styles.heroSub}>{memberCount} {memberCount===1?'member':'members'} · {household.role}</Text></View><Text style={styles.sectionTitle}>{activeSection[1]}</Text><Text style={styles.muted}>{activeSection[2]}</Text>
-      {active==='overview' ? <View style={styles.grid}>{sections.slice(1).map(s=><Pressable key={s[0]} onPress={()=>setActive(s[0])} style={styles.tile}><Text style={styles.tileCount}>{counts[s[0]]??'—'}</Text><Text style={styles.tileTitle}>{s[1]}</Text><Text style={styles.tileSub}>{s[2]}</Text></Pressable>)}</View> : <View style={styles.panel}><Text style={styles.heading}>{activeSection[1]}</Text><Text style={styles.muted}>This native section is being migrated. Your existing data remains in Supabase and the current web app continues to work.</Text><PrimaryButton title="Back to overview" onPress={()=>setActive('overview')}/></View>}
-    </ScrollView>}
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabs}>{sections.slice(0,7).map(s=><Pressable key={s[0]} onPress={()=>setActive(s[0])} style={[styles.tab,active===s[0]&&styles.tabActive]}><Text style={[styles.tabText,active===s[0]&&styles.tabTextActive]}>{s[1]}</Text></Pressable>)}</ScrollView>
-  </SafeAreaView>;
-}
-
-const styles=StyleSheet.create({
-  safe:{flex:1,backgroundColor:colors.bg},flex:{flex:1},center:{flex:1,alignItems:'center',justifyContent:'center',backgroundColor:colors.bg,gap:12},authWrap:{flexGrow:1,justifyContent:'center',padding:26},brandIcon:{width:58,height:58,borderRadius:18,backgroundColor:colors.green,alignItems:'center',justifyContent:'center',alignSelf:'center'},brandIconText:{fontSize:30,fontWeight:'800',color:'#fff'},brand:{fontSize:30,fontWeight:'800',color:colors.ink,textAlign:'center',marginTop:14},tagline:{fontSize:13,color:colors.muted,textAlign:'center',marginTop:6,marginBottom:28},panel:{backgroundColor:colors.white,borderRadius:20,padding:20,borderWidth:1,borderColor:colors.line,gap:10},heading:{fontSize:22,fontWeight:'800',color:colors.ink},muted:{fontSize:13,color:colors.muted,lineHeight:20},mutedSmall:{fontSize:11,color:colors.muted,marginTop:2},field:{gap:6,marginTop:8},label:{fontSize:12,fontWeight:'700',color:colors.ink},input:{borderWidth:1,borderColor:colors.line,borderRadius:11,paddingHorizontal:13,paddingVertical:12,fontSize:14,color:colors.ink,backgroundColor:'#fff'},primary:{backgroundColor:colors.green,borderRadius:11,padding:14,alignItems:'center',marginTop:8},primaryText:{color:'#fff',fontWeight:'700',fontSize:14},textButton:{alignItems:'center',padding:8},link:{color:colors.green,fontWeight:'700',fontSize:13},footer:{fontSize:11,color:colors.muted,textAlign:'center',lineHeight:17,marginTop:20},topbar:{paddingHorizontal:20,paddingVertical:13,flexDirection:'row',justifyContent:'space-between',alignItems:'center',borderBottomWidth:1,borderColor:colors.line},brandSmall:{fontSize:19,fontWeight:'800',color:colors.ink},content:{padding:18,paddingBottom:24},hero:{backgroundColor:colors.green,borderRadius:18,padding:20,marginBottom:24},eyebrow:{fontSize:10,color:'#DDE9DF',fontWeight:'800',letterSpacing:1.5},heroTitle:{fontSize:24,color:'#fff',fontWeight:'800',marginTop:7},heroSub:{fontSize:12,color:'#E2ECE3',marginTop:5},sectionTitle:{fontSize:22,color:colors.ink,fontWeight:'800',marginBottom:4},grid:{flexDirection:'row',flexWrap:'wrap',gap:10,marginTop:16},tile:{width:'48%',backgroundColor:'#fff',borderWidth:1,borderColor:colors.line,borderRadius:15,padding:14,minHeight:105},tileCount:{fontSize:24,fontWeight:'800',color:colors.green},tileTitle:{fontSize:13,fontWeight:'800',color:colors.ink,marginTop:7},tileSub:{fontSize:10,color:colors.muted,marginTop:3},empty:{flex:1,justifyContent:'center',padding:26,gap:12},tabs:{paddingHorizontal:12,paddingVertical:10,gap:7,borderTopWidth:1,borderColor:colors.line,backgroundColor:'#fff'},tab:{paddingHorizontal:13,paddingVertical:9,borderRadius:20,backgroundColor:colors.bg},tabActive:{backgroundColor:colors.pale},tabText:{fontSize:11,color:colors.muted,fontWeight:'700'},tabTextActive:{color:colors.green}
+const s=StyleSheet.create({
+ safe:{flex:1,backgroundColor:C.bg},flex:{flex:1},center:{flex:1,alignItems:'center',justifyContent:'center',backgroundColor:C.bg,gap:12},authWrap:{flexGrow:1,justifyContent:'center',padding:24,gap:14},logo:{width:58,height:58,borderRadius:18,backgroundColor:C.green,alignItems:'center',justifyContent:'center',alignSelf:'center'},logoText:{fontSize:30,fontWeight:'800',color:'#fff'},brand:{fontSize:30,fontWeight:'800',color:C.ink,textAlign:'center',fontWeight:'800'},tagline:{fontSize:13,color:C.muted,textAlign:'center',marginBottom:20},panel:{backgroundColor:C.white,borderRadius:18,padding:18,borderWidth:1,borderColor:C.line,gap:10,marginTop:14},heading:{fontSize:21,fontWeight:'800',color:C.ink},muted:{fontSize:12,color:C.muted,lineHeight:19},mutedSmall:{fontSize:11,color:C.muted,marginTop:2},field:{gap:6,marginTop:7},label:{fontSize:12,fontWeight:'700',color:C.ink},input:{borderWidth:1,borderColor:C.line,borderRadius:11,paddingHorizontal:13,paddingVertical:12,fontSize:14,color:C.ink,backgroundColor:'#fff'},button:{backgroundColor:C.green,borderRadius:11,paddingHorizontal:15,paddingVertical:12,alignItems:'center',justifyContent:'center'},buttonText:{color:'#fff',fontWeight:'700',fontSize:13},secondary:{backgroundColor:C.pale},secondaryText:{color:C.green},danger:{backgroundColor:'#FCEDEA'},dangerText:{color:C.red},link:{color:C.green,fontWeight:'700',fontSize:13,textAlign:'center',padding:10},topbar:{paddingHorizontal:18,paddingVertical:12,flexDirection:'row',justifyContent:'space-between',alignItems:'center',borderBottomWidth:1,borderColor:C.line,backgroundColor:'#fff'},brandSmall:{fontSize:19,fontWeight:'800',color:C.ink},tabs:{paddingHorizontal:10,paddingVertical:9,gap:7,backgroundColor:'#fff',borderBottomWidth:1,borderColor:C.line},tab:{paddingHorizontal:13,paddingVertical:9,borderRadius:20,backgroundColor:C.bg},tabActive:{backgroundColor:C.pale},tabText:{fontSize:11,color:C.muted,fontWeight:'700'},tabTextActive:{color:C.green},content:{padding:17,paddingBottom:40},hero:{backgroundColor:C.green,borderRadius:18,padding:19,marginBottom:21},eyebrow:{fontSize:10,color:'#DDE9DF',fontWeight:'800',letterSpacing:1.5},heroTitle:{fontSize:24,color:'#fff',fontWeight:'800',marginTop:7},heroSub:{fontSize:12,color:'#E2ECE3',marginTop:5},headingRow:{flexDirection:'row',alignItems:'center',gap:10,marginBottom:13},sectionTitle:{fontSize:21,color:C.ink,fontWeight:'800'},grid:{flexDirection:'row',flexWrap:'wrap',gap:10,marginTop:10},tile:{width:'48%',backgroundColor:'#fff',borderWidth:1,borderColor:C.line,borderRadius:15,padding:14,minHeight:105},tileCount:{fontSize:24,fontWeight:'800',color:C.green},tileTitle:{fontSize:13,fontWeight:'800',color:C.ink,marginTop:7},tileSub:{fontSize:10,color:C.muted,marginTop:3},record:{backgroundColor:'#fff',borderWidth:1,borderColor:C.line,borderRadius:13,padding:14,marginBottom:9,flexDirection:'row',alignItems:'center',gap:9},recordTitle:{fontSize:14,fontWeight:'700',color:C.ink},smallAction:{padding:8,backgroundColor:C.pale,borderRadius:8},smallActionText:{fontSize:11,color:C.green,fontWeight:'700'},delete:{padding:7},deleteText:{fontSize:11,color:C.red,fontWeight:'700'},code:{fontSize:24,fontWeight:'800',letterSpacing:3,color:C.green,paddingVertical:8},separator:{height:1,backgroundColor:C.line,marginVertical:8}
 });
