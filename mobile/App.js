@@ -143,7 +143,7 @@ export default function App(){
  },[session]);
  useEffect(()=>{if(online&&session)syncPendingChanges()},[online,session]);
  const queueOperation=async op=>{
-  let q=await readQueue();const at=q.findIndex(x=>x.table===op.table&&x.id===op.id);
+  let q=await readQueue();const opId=op.id||op.payload?.id;const at=q.findIndex(x=>x.table===op.table&&(x.id||x.payload?.id)===opId);
   if(op.kind==='update'&&at>=0&&q[at].kind==='insert'){q[at].payload={...q[at].payload,...op.patch};}
   else if(op.kind==='update'&&at>=0&&q[at].kind==='update'){q[at].patch={...q[at].patch,...op.patch};}
   else if(op.kind==='delete'&&at>=0&&q[at].kind==='insert'){q.splice(at,1);}
