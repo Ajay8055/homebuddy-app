@@ -184,7 +184,7 @@ create or replace function public.guard_household_record_ownership()
 returns trigger
 language plpgsql
 set search_path = pg_catalog, public
-as $
+as $$
 begin
   if new.household_id is distinct from old.household_id then
     raise exception 'A household record cannot be moved to another household';
@@ -194,7 +194,7 @@ begin
   end if;
   return new;
 end;
-$;
+$$;
 
 -- Index the foreign keys identified by Supabase's performance advisor.
 create index if not exists household_documents_uploaded_by_idx on public.household_documents(uploaded_by);
