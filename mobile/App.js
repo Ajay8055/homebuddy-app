@@ -66,7 +66,17 @@ export default function App(){
   const hasFailures=pairs.some(([, ,failed])=>failed);
   if(hasFailures){const cached=await AsyncStorage.getItem(cacheKey);if(cached){try{const previous=JSON.parse(cached);for(const [k,v] of Object.entries(next))if(v.length===0&&Array.isArray(previous[k]))next[k]=previous[k];}catch{}}}
   setCounts(Object.fromEntries(Object.entries(next).map(([k,v])=>[k,v.length])));
-  setRows(next);await AsyncStorage.setItem(cacheKey,JSON.stringify(next)).catch(()=>{});setRefreshing(false);
+  setRows(next);await AsyncStorage.setItem(cacheKey,JSON.stringify(next)).catch(()=>{});
+  const permission=await Notifications.getPermissionsAsync();
+  if(permission.status==='granted'){
+   const oldIds=JSON.parse(await AsyncStorage.getItem('homebuddy-local-notification-ids')||'[]');
+   await Promise.all(oldIds.map(id=>Notifications.cancelScheduledNotificationAsync(id).catch(()=>{})));
+   const candidates=[...(next.bills||[]).filter(x=>!x.is_paid).map(x=>({title:'Bill due: '+x.name,date:x.due_date,body:'Payment of ₹'+Number(x.amount||0).toLocaleString('en-IN')})),...(next.household_tasks||[]).filter(x=>!x.is_done).map(x=>({title:'Task: '+x.name,date:x.due_date,body:x.description||'Household task due'})),...(next.maintenance_reminders||[]).map(x=>({title:'Home maintenance: '+x.name,date:x.service_date,body:x.details||'Scheduled home maintenance'})),...(next.household_events||[]).map(x=>({title:'Family event: '+x.title,date:x.starts_at,body:x.description||'Upcoming family event'}))].filter(x=>x.date).slice(0,30);
+   const ids=[];
+   for(const item of candidates){const at=new Date(String(item.date).slice(0,10)+'T09:00:00');if(at<=new Date())continue;const id=await Notifications.scheduleNotificationAsync({content:{title:item.title,body:item.body,sound:'default'},trigger:{type:Notifications.SchedulableTriggerInputTypes.DATE,date:at,channelId:'homebuddy-reminders'}});ids.push(id);}
+   await AsyncStorage.setItem('homebuddy-local-notification-ids',JSON.stringify(ids));
+  }
+  setRefreshing(false);
  },[session,household]);
  useEffect(()=>{loadRows()},[loadRows]);
  useEffect(()=>{Notifications.setNotificationHandler({handleNotification:async()=>({shouldShowBanner:true,shouldShowList:true,shouldPlaySound:true,shouldSetBadge:false})});},[]);
@@ -83,7 +93,7 @@ export default function App(){
  useEffect(()=>{loadDocuments()},[loadDocuments]);
  const openDocument=async doc=>{const {data,error}=await supabase.storage.from('homebuddy-documents').createSignedUrl(doc.storage_path,60);if(error)return Alert.alert('Could not open document',error.message);const local=FileSystem.cacheDirectory+'hb-'+doc.id+'-'+doc.name.replace(/[^a-zA-Z0-9._-]/g,'_');const downloaded=await FileSystem.downloadAsync(data.signedUrl,local);if(await Sharing.isAvailableAsync())await Sharing.shareAsync(downloaded.uri);else Alert.alert('Document ready',downloaded.uri);};
  const deleteDocument=doc=>Alert.alert('Delete document?',doc.name,[{text:'Cancel',style:'cancel'},{text:'Delete',style:'destructive',onPress:async()=>{const {error}=await supabase.from('household_documents').delete().eq('id',doc.id).eq('household_id',household.id);if(error)return Alert.alert('Delete failed',error.message);const {error:se}=await supabase.storage.from('homebuddy-documents').remove([doc.storage_path]);if(se)Alert.alert('File cleanup needed',se.message);loadDocuments();}}]);
- const save=async()=>{const c=configs[active];if(!c||!values.name&&!values.title)return Alert.alert('Required','Please enter a name.');const payload={household_id:household.id,...c.defaults,...values};if(active==='personal_expenses')payload.user_id=session.user.id;if(['bills','shared_expenses','personal_expenses'].includes(active))payload.amount=Number(payload.amount||0);if(active==='shared_expenses')payload.paid_by=session.user.id;
+ const save=async()=>{const c=configs[active];if(!c||!values.name&&!values.title)return Alert.alert('Required','Please enter a name.');const payload={household_id:household.id,...(editingId?{}:c.defaults),...values};if(active==='personal_expenses')payload.user_id=session.user.id;if(['bills','shared_expenses','personal_expenses'].includes(active))payload.amount=Number(payload.amount||0);if(active==='shared_expenses')payload.paid_by=session.user.id;
  setBusy(true);const result=editingId?await supabase.from(c.table).update(payload).eq('id',editingId).eq('household_id',household.id):await supabase.from(c.table).insert(payload);setBusy(false);if(result.error)Alert.alert('Could not save',result.error.message);else{setForm(null);setEditingId(null);loadRows()}};
  const remove=record=>Alert.alert('Delete item?','This cannot be undone.',[{text:'Cancel',style:'cancel'},{text:'Delete',style:'destructive',onPress:async()=>{const c=configs[active];let q=supabase.from(c.table).delete().eq('id',record.id);q=active==='personal_expenses'?q.eq('user_id',session.user.id):q.eq('household_id',household.id);const {error}=await q;if(error)Alert.alert('Delete failed',error.message);else loadRows()}}]);
  const toggle=async(record)=>{const c=configs[active];const col=active==='bills'?'is_paid':'is_done';const val=!(record[col]||false);const {error}=await supabase.from(c.table).update({[col]:val,...(active==='bills'?{paid_at:val?new Date().toISOString():null}:{completed_at:val?new Date().toISOString():null})}).eq('id',record.id).eq('household_id',household.id);if(error)Alert.alert('Update failed',error.message);else loadRows()};
