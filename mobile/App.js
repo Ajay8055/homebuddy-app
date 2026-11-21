@@ -107,27 +107,30 @@ export default function App(){
  const readQueue=async()=>{if(!session)return [];try{return JSON.parse(await AsyncStorage.getItem(queueKey())||'[]')}catch{return []}};
  const readConflicts=async()=>{if(!session)return [];try{return JSON.parse(await AsyncStorage.getItem(conflictKey())||'[]')}catch{return []}};
  const syncPendingChanges=useCallback(async()=>{
-  if(!session||!supabase||!online)return;
-  const q=await readQueue();if(!q.length)return;
-  const remaining=[],issues=await readConflicts();
-  for(const op of q){
-   try{
-    if(op.kind==='insert'){const {error}=await supabase.from(op.table).insert(op.payload);if(error)throw error;continue;}
-    const {data:current,error:readError}=await supabase.from(op.table).select('*').eq('id',op.id).maybeSingle();
-    if(readError)throw readError;
-    if(!current){issues.push({...op,reason:'Record no longer exists on the server.'});continue;}
-    if(op.kind==='update'){
-     const changed=Object.keys(op.patch).some(k=>JSON.stringify(current[k]??null)!==JSON.stringify(op.base?.[k]??null));
-     if(changed){issues.push({...op,reason:'This record changed on another device. Review before overwriting.'});continue;}
-     const {error}=await supabase.from(op.table).update(op.patch).eq('id',op.id);if(error)throw error;
-    }else if(op.kind==='delete'){
-     const changed=Object.keys(op.base||{}).some(k=>JSON.stringify(current[k]??null)!==JSON.stringify(op.base[k]??null));
-     if(changed){issues.push({...op,reason:'This record changed on another device. Review before deleting.'});continue;}
-     const {error}=await supabase.from(op.table).delete().eq('id',op.id);if(error)throw error;
-    }
-   }catch(e){remaining.push(op);console.warn('Offline sync deferred',e.message)}
-  }
-  await persistQueue(remaining);await AsyncStorage.setItem(conflictKey(),JSON.stringify(issues));setConflicts(issues);await loadRows();
+  if(!session||!supabase||!online||syncLock.current)return;
+  syncLock.current=true;
+  try{
+   const q=await readQueue();if(!q.length)return;
+   const remaining=[],issues=await readConflicts();
+   for(const op of q){
+    try{
+     if(op.kind==='insert'){const {error}=await supabase.from(op.table).insert(op.payload);if(error)throw error;continue;}
+     const {data:current,error:readError}=await supabase.from(op.table).select('*').eq('id',op.id).maybeSingle();
+     if(readError)throw readError;
+     if(!current){issues.push({...op,reason:'Record no longer exists on the server.'});continue;}
+     if(op.kind==='update'){
+      const changed=Object.keys(op.patch).some(k=>JSON.stringify(current[k]??null)!==JSON.stringify(op.base?.[k]??null));
+      if(changed){issues.push({...op,reason:'This record changed on another device. Review before overwriting.'});continue;}
+      const {error}=await supabase.from(op.table).update(op.patch).eq('id',op.id);if(error)throw error;
+     }else if(op.kind==='delete'){
+      const changed=Object.keys(op.base||{}).some(k=>JSON.stringify(current[k]??null)!==JSON.stringify(op.base[k]??null));
+      if(changed){issues.push({...op,reason:'This record changed on another device. Review before deleting.'});continue;}
+      const {error}=await supabase.from(op.table).delete().eq('id',op.id);if(error)throw error;
+     }
+    }catch(e){remaining.push(op);console.warn('Offline sync deferred',e.message)}
+   }
+   await persistQueue(remaining);await AsyncStorage.setItem(conflictKey(),JSON.stringify(issues));setConflicts(issues);await loadRows();
+  }finally{syncLock.current=false;}
  },[session,online,household,loadRows]);
  useEffect(()=>{if(!session)return;let mounted=true;
   const loadLocal=async()=>{const q=await readQueue(),issues=await readConflicts();if(mounted){setPendingCount(q.length);setConflicts(issues)}};
