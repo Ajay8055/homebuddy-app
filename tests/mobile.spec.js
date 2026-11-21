@@ -23,7 +23,7 @@ test('short mobile screens can scroll the complete navigation drawer', async ({ 
 });
 
 test('long forms remain scrollable and their save action is reachable on short screens', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 600 });
+  await page.setViewportSize({ width: 390, height: 420 });
   await page.goto('/');
   await page.getByRole('button', { name: /open menu/i }).click();
   await page.getByRole('button', { name: /Household tasks/i }).last().click();
