@@ -94,5 +94,5 @@ test('short desktop screens can scroll the complete sidebar navigation', async (
   const canScroll = await sidebar.evaluate(el => el.scrollHeight > el.clientHeight);
   expect(canScroll).toBeTruthy();
   await sidebar.evaluate(el => { el.scrollTop = el.scrollHeight; });
-  await expect(sidebar.getByRole('button', { name: /Family/i })).toBeVisible();
+  await expect(sidebar.getByRole('button', { name: 'Family', exact: true })).toBeVisible();
 });
