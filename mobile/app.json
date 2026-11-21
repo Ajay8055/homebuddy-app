@@ -18,13 +18,7 @@
       ]
     },
     "plugins": [
-      "expo-status-bar",
       "expo-notifications"
-    ],
-    "extra": {
-      "eas": {
-        "projectId": "REPLACE_WITH_EAS_PROJECT_ID"
-      }
-    }
+    ]
   }
 }
