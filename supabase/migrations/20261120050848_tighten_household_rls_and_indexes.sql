@@ -20,11 +20,12 @@ begin
   execute format('drop policy if exists %I on public.%I','Household members can read '||t,t);
   execute format('drop policy if exists %I on public.%I','Household members can add '||t,t);
   execute format('drop policy if exists %I on public.%I','Household members can edit '||t,t);
-  execute format('drop policy if exists %I on public.%I','Household members can delete '||t,t);
-  execute format('create policy %I on public.%I for select to authenticated using (exists (select 1 from public.household_members m where m.household_id=%I.household_id and m.user_id=(select auth.uid())))','Members read '||t,t,t);
-  execute format('create policy %I on public.%I for insert to authenticated with check (exists (select 1 from public.household_members m where m.household_id=%I.household_id and m.user_id=(select auth.uid())) and created_by=(select auth.uid()))','Members insert '||t,t,t);
-  execute format('create policy %I on public.%I for update to authenticated using (exists (select 1 from public.household_members m where m.household_id=%I.household_id and m.user_id=(select auth.uid()))) with check (exists (select 1 from public.household_members m where m.household_id=%I.household_id and m.user_id=(select auth.uid())))','Members update '||t,t,t,t);
-  execute format('create policy %I on public.%I for delete to authenticated using (exists (select 1 from public.household_members m where m.household_id=%I.household_id and m.user_id=(select auth.uid())))','Members delete '||t,t,t);
+  execute format('drop policy if exists %I on public.%I','Members read '||t,t);
+  execute format('drop policy if exists %I on public.%I','Members insert '||t,t);
+  execute format('drop policy if exists %I on public.%I','Members update '||t,t);
+  execute format('create policy %I on public.%I for select to authenticated using (exists (select 1 from public.household_members m where m.household_id=%I.household_id and m.user_id=(select auth.uid())))','Household members can read '||t,t,t);
+  execute format('create policy %I on public.%I for insert to authenticated with check (exists (select 1 from public.household_members m where m.household_id=%I.household_id and m.user_id=(select auth.uid())) and created_by=(select auth.uid()))','Household members can add '||t,t,t);
+  execute format('create policy %I on public.%I for update to authenticated using (exists (select 1 from public.household_members m where m.household_id=%I.household_id and m.user_id=(select auth.uid()))) with check (exists (select 1 from public.household_members m where m.household_id=%I.household_id and m.user_id=(select auth.uid())))','Household members can edit '||t,t,t,t);
   execute format('create index if not exists %I on public.%I(household_id)',t||'_household_id_idx',t);
   execute format('create index if not exists %I on public.%I(created_by)',t||'_created_by_idx',t);
  end loop;
