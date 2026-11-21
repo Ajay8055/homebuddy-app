@@ -33,12 +33,23 @@ jobs:
       - name: Install dependencies
         run: npm install
       - name: Generate native Android project
-        run: npx expo prebuild --platform android --non-interactive
+        run: CI=1 npx expo prebuild --platform android
       - name: Build installable debug APK
         run: |
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug
+      - name: Emulator install and launch smoke test
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          script: |
+            adb install -r app/build/outputs/apk/debug/app-debug.apk
+            adb shell monkey -p com.homebuddy.app 1
+            sleep 10
+            adb shell dumpsys activity activities | grep -E 'mResumedActivity|topResumedActivity' | grep -q com.homebuddy.app
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
