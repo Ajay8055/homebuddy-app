@@ -184,7 +184,7 @@ begin
 
   return inserted_count;
 end;
-$function$
+$function$;
 
 CREATE OR REPLACE FUNCTION public.notify_household_activity()
  RETURNS trigger
@@ -229,7 +229,7 @@ begin
     and (kind<>'task' or tg_op<>'INSERT' or target_user is null or hm.user_id=target_user or hm.role='owner');
   return new;
 end;
-$function$
+$function$;
 
 CREATE OR REPLACE FUNCTION public.notification_secrets()
  RETURNS jsonb
@@ -240,7 +240,7 @@ AS $function$
   select jsonb_object_agg(name, decrypted_secret)
   from vault.decrypted_secrets
   where name in ('homebuddy_vapid_private','homebuddy_vapid_public','homebuddy_vapid_subject','homebuddy_cron_secret');
-$function$
+$function$;
 
 revoke all on function public.generate_homebuddy_reminders() from public,anon,authenticated;
 grant execute on function public.generate_homebuddy_reminders() to service_role;
