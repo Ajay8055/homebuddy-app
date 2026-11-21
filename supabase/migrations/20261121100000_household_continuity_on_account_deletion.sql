@@ -208,7 +208,7 @@ returns void
 language plpgsql
 security definer
 set search_path = pg_catalog, public, auth
-as $
+as $rollback$
 begin
   if not exists (select 1 from auth.users where id = original_owner_id) then
     raise exception 'Original account no longer exists; rollback is not applicable';
@@ -256,7 +256,7 @@ begin
     set status = 'active', archived_at = null, created_by = original_owner_id
     where id = target_household_id;
 end;
-$;
+$rollback$;
 revoke all on function public.rollback_household_owner_exit(uuid,uuid,uuid) from public, anon, authenticated;
 grant execute on function public.rollback_household_owner_exit(uuid,uuid,uuid) to service_role;
 
