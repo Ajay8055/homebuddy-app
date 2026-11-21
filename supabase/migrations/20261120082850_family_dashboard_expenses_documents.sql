@@ -27,7 +27,6 @@ create policy "Household members add shared expenses"
 on public.shared_expenses for insert to authenticated
 with check (
   private.is_household_member(household_id)
-  and private.is_household_member(household_id)
   and created_by = (select auth.uid())
   and exists (
     select 1 from public.household_members m
