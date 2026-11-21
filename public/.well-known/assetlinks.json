@@ -1,0 +1,10 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.homebuddy.app",
+      "sha256_cert_fingerprints": ["09:85:BD:39:05:1F:88:DC:45:A7:B3:87:D0:59:1B:90:6B:88:C2:29:B8:64:D8:95:E9:00:70:5A:35:BD:F6:F7"]
+    }
+  }
+]
