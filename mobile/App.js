@@ -59,7 +59,7 @@ export default function App(){
   const cacheKey='homebuddy-native-cache-'+household.id;\n  const pairs=await Promise.all(Object.entries(configs).map(async([k,c])=>{
    let q=supabase.from(c.table).select('*').eq('household_id',household.id).order('created_at',{ascending:false}).limit(100);
    if(k==='personal_expenses')q=q.eq('user_id',session.user.id);
-   const {data,error}=await q;return [k,error?[]:(data||[])];
+   const {data,error}=await q;return [k,error?[]:(data||[]),!!error];
   }));
   setCounts(Object.fromEntries(pairs.map(([k,v])=>[k,v.length])));
   setRows(Object.fromEntries(pairs));setRefreshing(false);
