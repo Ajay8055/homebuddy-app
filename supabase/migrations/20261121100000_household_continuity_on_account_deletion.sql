@@ -196,6 +196,70 @@ begin
 end;
 $$;
 
+
+-- If Auth deletion fails after ownership was changed, restore the original
+-- owner only when the expected transfer/archive state is still untouched.
+create or replace function public.rollback_household_owner_exit(
+  target_household_id uuid,
+  original_owner_id uuid,
+  transfer_to_user_id uuid default null
+)
+returns void
+language plpgsql
+security definer
+set search_path = pg_catalog, public, auth
+as $
+begin
+  if not exists (select 1 from auth.users where id = original_owner_id) then
+    raise exception 'Original account no longer exists; rollback is not applicable';
+  end if;
+
+  perform 1 from public.households where id = target_household_id for update;
+  if not found then raise exception 'Household not found during rollback'; end if;
+
+  if transfer_to_user_id is null then
+    if not exists (
+      select 1 from public.households
+      where id = target_household_id and status = 'archived'
+    ) or not exists (
+      select 1 from public.household_members
+      where household_id = target_household_id and user_id = original_owner_id and role = 'member'
+    ) then
+      raise exception 'Household changed after archival; refusing unsafe rollback';
+    end if;
+    update public.household_members
+      set role = 'owner'
+      where household_id = target_household_id and user_id = original_owner_id;
+    update public.households
+      set status = 'active', archived_at = null, created_by = original_owner_id
+      where id = target_household_id;
+    return;
+  end if;
+
+  if not exists (
+    select 1 from public.household_members
+    where household_id = target_household_id and user_id = transfer_to_user_id and role = 'owner'
+  ) or not exists (
+    select 1 from public.household_members
+    where household_id = target_household_id and user_id = original_owner_id and role = 'member'
+  ) then
+    raise exception 'Household ownership changed after transfer; refusing unsafe rollback';
+  end if;
+
+  update public.household_members
+    set role = 'member'
+    where household_id = target_household_id and user_id = transfer_to_user_id;
+  update public.household_members
+    set role = 'owner'
+    where household_id = target_household_id and user_id = original_owner_id;
+  update public.households
+    set status = 'active', archived_at = null, created_by = original_owner_id
+    where id = target_household_id;
+end;
+$;
+revoke all on function public.rollback_household_owner_exit(uuid,uuid,uuid) from public, anon, authenticated;
+grant execute on function public.rollback_household_owner_exit(uuid,uuid,uuid) to service_role;
+
 -- Index the foreign keys identified by Supabase's performance advisor.
 create index if not exists household_documents_uploaded_by_idx on public.household_documents(uploaded_by);
 create index if not exists maintenance_reminders_asset_id_idx on public.maintenance_reminders(asset_id);
