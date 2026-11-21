@@ -74,8 +74,11 @@ export default function App(){
   setCounts(Object.fromEntries(Object.entries(next).map(([k,v])=>[k,v.length])));
   setRows(next);await AsyncStorage.setItem(cacheKey,JSON.stringify(next)).catch(()=>{});
   const permission=await Notifications.getPermissionsAsync();
+  const {data:remoteRegistrations}=await supabase.from('native_push_tokens').select('id').eq('user_id',session.user.id).eq('active',true).limit(1);
+  const oldIds=JSON.parse(await AsyncStorage.getItem('homebuddy-local-notification-ids')||'[]');
+  if(remoteRegistrations?.length){await Promise.all(oldIds.map(id=>Notifications.cancelScheduledNotificationAsync(id).catch(()=>{})));await AsyncStorage.setItem('homebuddy-local-notification-ids','[]');setNotificationEnabled(true);setRefreshing(false);return;}
+  setNotificationEnabled(false);
   if(permission.status==='granted'){
-   const oldIds=JSON.parse(await AsyncStorage.getItem('homebuddy-local-notification-ids')||'[]');
    await Promise.all(oldIds.map(id=>Notifications.cancelScheduledNotificationAsync(id).catch(()=>{})));
    const candidates=[...(next.bills||[]).filter(x=>!x.is_paid).map(x=>({title:'Bill due: '+x.name,date:x.due_date,body:'Payment of ₹'+Number(x.amount||0).toLocaleString('en-IN')})),...(next.household_tasks||[]).filter(x=>!x.is_done).map(x=>({title:'Task: '+x.name,date:x.due_date,body:x.description||'Household task due'})),...(next.maintenance_reminders||[]).map(x=>({title:'Home maintenance: '+x.name,date:x.service_date,body:x.details||'Scheduled home maintenance'})),...(next.household_events||[]).map(x=>({title:'Family event: '+x.title,date:x.starts_at,body:x.description||'Upcoming family event'}))].filter(x=>x.date).slice(0,30);
    const ids=[];
