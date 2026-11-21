@@ -3,3 +3,9 @@ dist
 .env
 .env.local
 .DS_Store
+# Android build outputs and signing material
+.gradle/
+android/.gradle/
+android/app/build/
+*.jks
+*.keystore
