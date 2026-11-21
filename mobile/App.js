@@ -71,7 +71,7 @@ export default function App(){
   const next=Object.fromEntries(pairs.map(([k,v])=>[k,v]));
   const hasFailures=pairs.some(([, ,failed])=>failed);
   if(hasFailures){const cached=await AsyncStorage.getItem(cacheKey);if(cached){try{const previous=JSON.parse(cached);for(const [k,v] of Object.entries(next))if(v.length===0&&Array.isArray(previous[k]))next[k]=previous[k];}catch{}}}
-  try{const pending=JSON.parse(await AsyncStorage.getItem('homebuddy-offline-queue-'+session.user.id)||'[]');for(const op of pending){const section=Object.keys(configs).find(k=>configs[k].table===op.table);if(!section)continue;const list=[...(next[section]||[])];if(op.kind==='insert'&&!list.some(x=>x.id===op.id))list.unshift(op.payload);else if(op.kind==='update'){const i=list.findIndex(x=>x.id===op.id);if(i>=0)list[i]={...list[i],...op.patch};}else if(op.kind==='delete')next[section]=list.filter(x=>x.id!==op.id);if(op.kind!=='delete')next[section]=list;}}catch{}
+  try{const pending=JSON.parse(await AsyncStorage.getItem('homebuddy-offline-queue-'+session.user.id)||'[]');for(const op of pending){const section=Object.keys(configs).find(k=>configs[k].table===op.table);if(!section)continue;const list=[...(next[section]||[])];if(op.kind==='insert'&&!list.some(x=>x.id===op.payload.id))list.unshift(op.payload);else if(op.kind==='update'){const i=list.findIndex(x=>x.id===op.id);if(i>=0)list[i]={...list[i],...op.patch};}else if(op.kind==='delete')next[section]=list.filter(x=>x.id!==op.id);if(op.kind!=='delete')next[section]=list;}}catch{}
   setCounts(Object.fromEntries(Object.entries(next).map(([k,v])=>[k,v.length])));
   setRows(next);await AsyncStorage.setItem(cacheKey,JSON.stringify(next)).catch(()=>{});
   const permission=await Notifications.getPermissionsAsync();
