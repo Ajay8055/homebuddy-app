@@ -85,3 +85,14 @@ test('completing a recurring task keeps a completed record and creates its next 
   await expect(rows.locator('button.tick.done')).toHaveCount(1);
   await expect(rows.locator('button.tick:not(.done)')).toHaveCount(1);
 });
+
+
+test('short desktop screens can scroll the complete sidebar navigation', async ({ page }) => {
+  await page.setViewportSize({ width: 1024, height: 600 });
+  await page.goto('/');
+  const sidebar = page.locator('.side');
+  const canScroll = await sidebar.evaluate(el => el.scrollHeight > el.clientHeight);
+  expect(canScroll).toBeTruthy();
+  await sidebar.evaluate(el => { el.scrollTop = el.scrollHeight; });
+  await expect(sidebar.getByRole('button', { name: /Family/i })).toBeVisible();
+});
