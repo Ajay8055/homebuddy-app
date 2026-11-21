@@ -71,7 +71,7 @@ test('notification preferences remain interactive in demo mode', async ({ page }
 });
 
 
-test('completing a recurring task creates its next occurrence', async ({ page }) => {
+test('completing a recurring task keeps a completed record and creates its next occurrence', async ({ page }) => {
   await page.getByRole('button', { name: /Reminder centre/i }).first().click();
   await page.getByRole('button', { name: /Add reminder/i }).click();
   await page.getByPlaceholder(/Give it a name/i).fill('Automation recurring task');
@@ -81,6 +81,7 @@ test('completing a recurring task creates its next occurrence', async ({ page })
   const rows = page.locator('[data-record-id]').filter({ hasText: 'Automation recurring task' });
   await expect(rows).toHaveCount(1);
   await rows.locator('button.tick').click();
-  await expect(page.locator('[data-record-id]').filter({ hasText: 'Automation recurring task' })).toHaveCount(1);
-  await expect(page.locator('[data-record-id]').filter({ hasText: 'Automation recurring task' }).locator('button.tick')).not.toHaveClass(/done/);
+  await expect(rows).toHaveCount(2);
+  await expect(rows.locator('button.tick.done')).toHaveCount(1);
+  await expect(rows.locator('button.tick:not(.done)')).toHaveCount(1);
 });
