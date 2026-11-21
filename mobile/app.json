@@ -1,0 +1,29 @@
+{
+  "expo": {
+    "name": "HomeBuddy",
+    "slug": "homebuddy",
+    "scheme": "homebuddy",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "android": {
+      "package": "com.homebuddy.app",
+      "versionCode": 2,
+      "adaptiveIcon": {
+        "backgroundColor": "#557765"
+      },
+      "permissions": [
+        "POST_NOTIFICATIONS"
+      ]
+    },
+    "plugins": [
+      "expo-status-bar"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "REPLACE_WITH_EAS_PROJECT_ID"
+      }
+    }
+  }
+}
