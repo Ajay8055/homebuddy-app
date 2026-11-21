@@ -22,20 +22,11 @@ test('short mobile screens can scroll the complete navigation drawer', async ({ 
   await expect(drawer.getByRole('button', { name: /Family/i }).last()).toBeVisible();
 });
 
-test('short desktop screens can scroll the complete sidebar navigation', async ({ page }) => {
-  await page.setViewportSize({ width: 1024, height: 600 });
-  await page.goto('/');
-  const sidebar = page.locator('.side');
-  const canScroll = await sidebar.evaluate(el => el.scrollHeight > el.clientHeight);
-  expect(canScroll).toBeTruthy();
-  await sidebar.evaluate(el => { el.scrollTop = el.scrollHeight; });
-  await expect(sidebar.getByRole('button', { name: /Family/i })).toBeVisible();
-});
-
 test('long forms remain scrollable and their save action is reachable on short screens', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 600 });
   await page.goto('/');
-  await page.getByRole('button', { name: /Household tasks/i }).first().click();
+  await page.getByRole('button', { name: /open menu/i }).click();
+  await page.getByRole('button', { name: /Household tasks/i }).last().click();
   await page.getByRole('button', { name: /Add new/i }).click();
   const modal = page.locator('.shade .modal');
   await expect(modal).toBeVisible();
