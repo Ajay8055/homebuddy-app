@@ -178,6 +178,24 @@ begin
   end loop;
 end $$;
 
+-- FK ON DELETE SET NULL must be allowed through the existing creator guard.
+-- A non-null replacement remains blocked, preventing creator reassignment/spoofing.
+create or replace function public.guard_household_record_ownership()
+returns trigger
+language plpgsql
+set search_path = pg_catalog, public
+as $
+begin
+  if new.household_id is distinct from old.household_id then
+    raise exception 'A household record cannot be moved to another household';
+  end if;
+  if new.created_by is distinct from old.created_by and new.created_by is not null then
+    raise exception 'The original record creator cannot be changed';
+  end if;
+  return new;
+end;
+$;
+
 -- Index the foreign keys identified by Supabase's performance advisor.
 create index if not exists household_documents_uploaded_by_idx on public.household_documents(uploaded_by);
 create index if not exists maintenance_reminders_asset_id_idx on public.maintenance_reminders(asset_id);
