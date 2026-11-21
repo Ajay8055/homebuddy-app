@@ -269,3 +269,41 @@ create index if not exists notifications_household_id_idx on public.notification
 create index if not exists personal_expenses_household_id_idx on public.personal_expenses(household_id);
 create index if not exists shared_expenses_created_by_idx on public.shared_expenses(created_by);
 create index if not exists shared_expenses_paid_by_idx on public.shared_expenses(paid_by);
+
+-- Private expenses remain available to read in an archived household, but
+-- household-wide read-only mode also prevents creating or changing them.
+create policy "Active household required for private expense insert"
+on public.personal_expenses as restrictive for insert to authenticated
+with check (private.is_household_active(household_id));
+create policy "Active household required for private expense update"
+on public.personal_expenses as restrictive for update to authenticated
+using (private.is_household_active(household_id))
+with check (private.is_household_active(household_id));
+create policy "Active household required for private expense delete"
+on public.personal_expenses as restrictive for delete to authenticated
+using (private.is_household_active(household_id));
+
+-- Storage uploads and mutations must follow the same archived-household
+-- read-only rule. Existing documents remain readable to household members.
+create policy "Active household required for vault upload"
+on storage.objects as restrictive for insert to authenticated
+with check (
+  bucket_id <> 'homebuddy-documents'
+  or private.is_household_active(((storage.foldername(name))[1])::uuid)
+);
+create policy "Active household required for vault update"
+on storage.objects as restrictive for update to authenticated
+using (
+  bucket_id <> 'homebuddy-documents'
+  or private.is_household_active(((storage.foldername(name))[1])::uuid)
+)
+with check (
+  bucket_id <> 'homebuddy-documents'
+  or private.is_household_active(((storage.foldername(name))[1])::uuid)
+);
+create policy "Active household required for vault delete"
+on storage.objects as restrictive for delete to authenticated
+using (
+  bucket_id <> 'homebuddy-documents'
+  or private.is_household_active(((storage.foldername(name))[1])::uuid)
+);
