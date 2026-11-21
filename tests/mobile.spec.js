@@ -27,7 +27,7 @@ test('long forms remain scrollable and their save action is reachable on short s
   await page.goto('/');
   await page.getByRole('button', { name: /open menu/i }).click();
   await page.getByRole('button', { name: /Household tasks/i }).last().click();
-  await page.getByRole('button', { name: /Add new/i }).click();
+  await page.getByRole('button', { name: /Add new/i }).first().click();
   const modal = page.locator('.shade .modal');
   await expect(modal).toBeVisible();
   const canScroll = await modal.evaluate(el => el.scrollHeight > el.clientHeight);
