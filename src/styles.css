@@ -178,3 +178,45 @@
 .home-shortcut{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:40px;padding:10px 13px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--text);font:inherit;font-size:12px;font-weight:650;cursor:pointer;white-space:nowrap}
 .home-shortcut:hover{border-color:var(--accent);background:#f2f7f1}
 @media(max-width:640px){.welcome-actions{width:100%;flex-wrap:wrap}.home-shortcut{flex:1}.welcome-actions .primary{flex:1}}
+
+
+/* Prevent navigation, drawers and dialogs from being clipped on short screens. */
+.shell{min-height:100dvh}
+main{min-height:100dvh}
+.side{overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
+.side-drawer{max-height:100dvh;overflow-y:auto;overscroll-behavior:contain}
+.drawer-shade{overflow-y:auto}
+.shade{overflow-y:auto;align-items:start}
+.shade .modal{max-height:calc(100dvh - 32px);overflow-y:auto;overscroll-behavior:contain;margin:auto}
+@media(max-width:700px){
+  .side-drawer{width:min(320px,calc(100vw - 52px));padding-bottom:calc(20px + env(safe-area-inset-bottom))}
+  .content{padding-bottom:calc(32px + env(safe-area-inset-bottom))}
+  .shade{padding:max(12px,env(safe-area-inset-top)) 12px max(12px,env(safe-area-inset-bottom))}
+  .shade .modal{max-height:calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom))}
+}
+
+/* Family membership and household controls */
+.family-heading,.household-settings-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.member-count{flex-shrink:0;padding:7px 10px;border-radius:20px;background:#edf4ed;color:#557765;font-size:11px;font-weight:700}
+.household-settings{display:grid;gap:12px;margin-top:26px;padding-top:20px;border-top:1px solid var(--line)}
+.household-settings-heading{align-items:center}
+.household-settings-heading h2{font:700 16px Manrope,sans-serif;margin:0 0 5px}
+.household-settings-heading>svg{color:var(--accent);flex-shrink:0}
+.household-setting-card{display:grid;grid-template-columns:minmax(0,1fr) minmax(220px,auto);align-items:center;gap:16px;padding:16px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+.household-setting-card b{font-size:12px}
+.household-setting-card .sub{margin-top:5px;line-height:1.55}
+.invite-code-row,.household-setting-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.invite-code-row code{padding:9px 12px;border:1px dashed #a9bca9;border-radius:8px;background:white;color:#456653;font-size:13px;letter-spacing:1.4px}
+.invite-code-row .secondary,.household-setting-actions .secondary{width:auto;display:inline-flex;align-items:center;gap:7px;white-space:nowrap}
+.household-setting-actions select{min-width:190px;max-width:100%;padding:10px;border:1px solid var(--line);border-radius:9px;background:white;color:var(--text);font:inherit;font-size:12px}
+.archive-setting{border-color:#eadfd4}
+.archive-button{border:1px solid #d9bda4;border-radius:9px;background:#fff8f1;color:#8d5b35;padding:10px 13px;font:inherit;font-size:12px;font-weight:700;white-space:nowrap}
+.archive-button:disabled,.household-setting-actions button:disabled{opacity:.55;cursor:wait}
+@media(max-width:700px){
+ .household-setting-card{grid-template-columns:1fr;align-items:stretch}
+ .invite-code-row,.household-setting-actions{justify-content:stretch}
+ .invite-code-row .secondary,.household-setting-actions .secondary{width:100%;justify-content:center}
+ .household-setting-actions select{width:100%;min-width:0}
+ .archive-button{width:100%}
+ .family-heading{align-items:flex-start}
+}
