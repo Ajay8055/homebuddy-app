@@ -1,0 +1,10 @@
+<resources>
+    <style name="TwaSplashTheme" parent="android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:colorAccent">#557765</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:statusBarColor">#557765</item>
+        <item name="android:navigationBarColor">#405C4D</item>
+        <item name="android:windowActionModeOverlay">true</item>
+    </style>
+</resources>
