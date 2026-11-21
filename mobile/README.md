@@ -23,6 +23,8 @@ A native React Native + Expo Android client. It is not a WebView, PWA shortcut, 
 - Document vault: native file picker, 10 MB limit, allowed MIME types, upload to existing private `homebuddy-documents` bucket, metadata row, signed-URL download/share and delete.
 - Local notification permission/channel and scheduled local reminders for due bills, tasks, maintenance and events. These are device-local notifications; remote push delivery to family members is not yet implemented.
 - Basic cached household records for read fallback during network errors.
+- Persistent offline create/update/delete queue with optimistic local list updates, automatic replay when connectivity returns, conflict detection against server snapshots and explicit keep-server/overwrite resolution.
+- Native account deletion wired to the existing authenticated Edge Function, plus owner household deletion with private document object cleanup.
 - Realtime refresh for selected shared tables.
 - Native Android CI workflow that builds and uploads a debug APK.
 
