@@ -56,13 +56,17 @@ export default function App(){
  const loadRows=useCallback(async()=>{
   if(!session||!household||!supabase)return;
   setRefreshing(true);
-  const cacheKey='homebuddy-native-cache-'+household.id;\n  const pairs=await Promise.all(Object.entries(configs).map(async([k,c])=>{
+  const cacheKey='homebuddy-native-cache-'+household.id;
+  const pairs=await Promise.all(Object.entries(configs).map(async([k,c])=>{
    let q=supabase.from(c.table).select('*').eq('household_id',household.id).order('created_at',{ascending:false}).limit(100);
    if(k==='personal_expenses')q=q.eq('user_id',session.user.id);
    const {data,error}=await q;return [k,error?[]:(data||[]),!!error];
   }));
-  setCounts(Object.fromEntries(pairs.map(([k,v])=>[k,v.length])));
-  setRows(Object.fromEntries(pairs));setRefreshing(false);
+  const next=Object.fromEntries(pairs.map(([k,v])=>[k,v]));
+  const hasFailures=pairs.some(([, ,failed])=>failed);
+  if(hasFailures){const cached=await AsyncStorage.getItem(cacheKey);if(cached){try{const previous=JSON.parse(cached);for(const [k,v] of Object.entries(next))if(v.length===0&&Array.isArray(previous[k]))next[k]=previous[k];}catch{}}}
+  setCounts(Object.fromEntries(Object.entries(next).map(([k,v])=>[k,v.length])));
+  setRows(next);await AsyncStorage.setItem(cacheKey,JSON.stringify(next)).catch(()=>{});setRefreshing(false);
  },[session,household]);
  useEffect(()=>{loadRows()},[loadRows]);
  useEffect(()=>{Notifications.setNotificationHandler({handleNotification:async()=>({shouldShowBanner:true,shouldShowList:true,shouldPlaySound:true,shouldSetBadge:false})});},[]);
