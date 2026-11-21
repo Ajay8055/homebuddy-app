@@ -220,3 +220,9 @@ main{min-height:100dvh}
  .archive-button{width:100%}
  .family-heading{align-items:flex-start}
 }
+
+/* Household settings are deliberately placed near the top of Family, not below the member roster. */
+.household-settings{margin-top:16px;padding-top:14px;scroll-margin-top:20px}
+.household-settings-heading{padding:2px 0 4px}
+.settings-readonly{grid-template-columns:minmax(0,1fr)}
+@media(max-width:700px){.household-settings{gap:10px}.household-setting-card{grid-template-columns:minmax(0,1fr);align-items:stretch}.invite-code-row,.household-setting-actions{justify-content:flex-start}.household-setting-actions select{width:100%}.household-setting-actions button,.archive-button,.delete-household-button{width:100%}}
