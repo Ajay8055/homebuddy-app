@@ -1,5 +1,5 @@
 import 'react-native-url-polyfill/auto';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TextInput, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as DocumentPicker from 'expo-document-picker';
@@ -44,7 +44,7 @@ const dateToday=()=>new Date().toISOString().slice(0,10);
 function Button({title,onPress,secondary=false,danger=false,disabled=false}){return <Pressable accessibilityRole="button" onPress={onPress} disabled={disabled} style={({pressed})=>[s.button,secondary&&s.secondary,danger&&s.danger,disabled&&{opacity:.5},pressed&&{opacity:.8}]}><Text style={[s.buttonText,secondary&&s.secondaryText,danger&&s.dangerText]}>{title}</Text></Pressable>}
 function Field({label,value,onChangeText,keyboardType='default',multiline=false,secureTextEntry=false}){return <View style={s.field}><Text style={s.label}>{label}</Text><TextInput value={value} onChangeText={onChangeText} placeholder={label} placeholderTextColor="#A0AAA1" keyboardType={keyboardType} multiline={multiline} secureTextEntry={secureTextEntry} style={[s.input,multiline&&{minHeight:76,textAlignVertical:'top'}]}/></View>}
 export default function App(){
- const [session,setSession]=useState(null),[ready,setReady]=useState(false),[email,setEmail]=useState(''),[password,setPassword]=useState(''),[signup,setSignup]=useState(false),[busy,setBusy]=useState(false);
+ const syncLock=useRef(false);\n const [session,setSession]=useState(null),[ready,setReady]=useState(false),[email,setEmail]=useState(''),[password,setPassword]=useState(''),[signup,setSignup]=useState(false),[busy,setBusy]=useState(false);
  const [household,setHousehold]=useState(null),[houseName,setHouseName]=useState('My household'),[invite,setInvite]=useState(''),[members,setMembers]=useState([]);
  const [active,setActive]=useState('overview'),[rows,setRows]=useState([]),[counts,setCounts]=useState({}),[form,setForm]=useState(null),[values,setValues]=useState({}),[refreshing,setRefreshing]=useState(false),[editingId,setEditingId]=useState(null),[docName,setDocName]=useState(''),[docCategory,setDocCategory]=useState('Other'),[pickedDoc,setPickedDoc]=useState(null),[documents,setDocuments]=useState([]),[notificationEnabled,setNotificationEnabled]=useState(false),[transferTarget,setTransferTarget]=useState(''),[pendingCount,setPendingCount]=useState(0),[conflicts,setConflicts]=useState([]),[online,setOnline]=useState(true),[pushToken,setPushToken]=useState(null);
  useEffect(()=>{if(!supabase){setReady(true);return}supabase.auth.getSession().then(({data})=>{setSession(data.session);setReady(true)});const {data:{subscription}}=supabase.auth.onAuthStateChange((_e,v)=>setSession(v));return()=>subscription.unsubscribe()},[]);
@@ -84,7 +84,7 @@ export default function App(){
   setRefreshing(false);
  },[session,household]);
  useEffect(()=>{loadRows()},[loadRows]);
- useEffect(()=>{Notifications.setNotificationHandler({handleNotification:async()=>({shouldShowBanner:true,shouldShowList:true,shouldPlaySound:true,shouldSetBadge:false})});},[]);
+ useEffect(()=>{const listener=Notifications.addNotificationResponseReceivedListener(response=>{const target=response.notification.request.content.data?.url;if(typeof target==='string'){const page=new URL(target,'https://homebuddy.app').searchParams.get('page');const map={shopping:'shopping_items',bills:'bills',tasks:'household_tasks',calendar:'household_events',maintenance:'maintenance_reminders',family:'family'};if(page)setActive(map[page]||'overview');}});return()=>listener.remove();},[]);\n useEffect(()=>{Notifications.setNotificationHandler({handleNotification:async()=>({shouldShowBanner:true,shouldShowList:true,shouldPlaySound:true,shouldSetBadge:false})});},[]);
  const enableNotifications=registerNativePush;
  useEffect(()=>{if(!household||!supabase)return;const ch=supabase.channel('native-home-'+household.id).on('postgres_changes',{event:'*',schema:'public',table:'shopping_items',filter:'household_id=eq.'+household.id},loadRows).on('postgres_changes',{event:'*',schema:'public',table:'bills',filter:'household_id=eq.'+household.id},loadRows).on('postgres_changes',{event:'*',schema:'public',table:'household_tasks',filter:'household_id=eq.'+household.id},loadRows).subscribe();return()=>{supabase.removeChannel(ch)}},[household,loadRows]);
  const auth=async()=>{if(!supabase){Alert.alert('Setup required','Configure mobile/.env with the Supabase URL and anon/publishable key.');return}setBusy(true);const result=signup?await supabase.auth.signUp({email:email.trim(),password}):await supabase.auth.signInWithPassword({email:email.trim(),password});setBusy(false);if(result.error)Alert.alert('Authentication failed',result.error.message);else if(signup&&!result.data.session)Alert.alert('Account created','Check your email to confirm your account, then sign in.')};
@@ -129,7 +129,7 @@ export default function App(){
  },[session,online,household,loadRows]);
  useEffect(()=>{if(!session)return;let mounted=true;
   const loadLocal=async()=>{const q=await readQueue(),issues=await readConflicts();if(mounted){setPendingCount(q.length);setConflicts(issues)}};
-  loadLocal();const unsubscribe=NetInfo.addEventListener(state=>{const connected=!!state.isConnected&&state.isInternetReachable!==false;setOnline(connected);});
+  loadLocal();NetInfo.fetch().then(state=>setOnline(!!state.isConnected&&state.isInternetReachable!==false));const unsubscribe=NetInfo.addEventListener(state=>{const connected=!!state.isConnected&&state.isInternetReachable!==false;setOnline(connected);});
   return()=>{mounted=false;unsubscribe()};
  },[session]);
  useEffect(()=>{if(online&&session)syncPendingChanges()},[online,session]);
