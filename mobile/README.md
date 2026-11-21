@@ -14,6 +14,15 @@ A native React Native + Expo Android client. It is not a WebView, PWA shortcut, 
 3. Copy `.env.example` to `.env` and set the existing Supabase URL and anon/publishable key. Never use a service-role key in a mobile app.
 4. Run `npx expo run:android` with an emulator or Android device connected.
 
+## Enable remote Android push
+1. Run `eas login` and `eas init` from `mobile/` using the app owner's Expo account.
+2. Set `EXPO_PUBLIC_EAS_PROJECT_ID` to the EAS project ID in the local `.env` and the EAS build environment.
+3. In Firebase Console, register Android package `com.homebuddy.app` and configure Firebase Cloud Messaging HTTP v1.
+4. Upload the Firebase service-account JSON as the Android FCM v1 credential in Expo/EAS credentials. Never commit the service-account JSON or private key.
+5. Build/install a new Android binary, grant notification permission, and use **Family & settings → Enable push notifications → Send test notification**.
+
+Without the EAS project and FCM credential, the app continues to use local scheduled reminders; native remote push registration is intentionally blocked rather than silently pretending it is enabled.
+
 ## Implemented in this migration branch
 - Native email/password sign-in and account creation.
 - Household creation and invite-code joining using existing RPCs.
