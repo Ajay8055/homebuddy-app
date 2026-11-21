@@ -1,4 +1,4 @@
--- Keep task-creation activity notifications limited to the assignee and household owner.
+-- Keep task-created activity notifications limited to the assignee and household owner.
 CREATE OR REPLACE FUNCTION public.notify_household_activity()
  RETURNS trigger
  LANGUAGE plpgsql
@@ -42,4 +42,4 @@ begin
     and (kind<>'task' or tg_op<>'INSERT' or target_user is null or hm.user_id=target_user or hm.role='owner');
   return new;
 end;
-$function$
+$function$;
