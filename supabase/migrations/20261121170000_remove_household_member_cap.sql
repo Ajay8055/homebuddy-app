@@ -59,3 +59,32 @@ as $wrapper$
 $wrapper$;
 revoke all on function public.join_household(text) from public, anon;
 grant execute on function public.join_household(text) to authenticated;
+
+
+-- Permanently delete a household only when explicitly requested by its owner.
+-- The client removes vault files through the Storage API before calling this RPC.
+create or replace function public.delete_household(target_household_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = pg_catalog, public
+as $delete$
+begin
+  if auth.uid() is null then
+    raise exception 'Authentication required';
+  end if;
+  perform 1
+  from public.households h
+  join public.household_members m on m.household_id = h.id
+  where h.id = target_household_id
+    and m.user_id = auth.uid()
+    and m.role = 'owner'
+  for update of h;
+  if not found then
+    raise exception 'Only the household owner can delete this household';
+  end if;
+  delete from public.households where id = target_household_id;
+end;
+$delete$;
+revoke all on function public.delete_household(uuid) from public, anon;
+grant execute on function public.delete_household(uuid) to authenticated;
