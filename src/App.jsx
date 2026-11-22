@@ -120,8 +120,9 @@ function Modal({type,close,save,setPage,page,members=[],userId}){
 
 function AssistantChat({supabase,session,household,notice}){
  const [messages,setMessages]=useState([{role:'assistant',content:'Hi! I’m your HomeBuddy assistant. You can ask me in English, Hindi or Hinglish. Try “kal subah 9 baje AC service ka reminder laga do” or “milk aur bread shopping list mein add karo”.'}]);
- const [text,setText]=useState(''),[busy,setBusy]=useState(false),[conversationId,setConversationId]=useState(()=>localStorage.getItem('homebuddy-ai-conversation')||null),[voiceLang,setVoiceLang]=useState('hi-IN'),[listening,setListening]=useState(false);
- useEffect(()=>{if(!conversationId||!supabase||!session)return;supabase.from('ai_messages').select('role,content').eq('conversation_id',conversationId).eq('user_id',session.user.id).order('created_at',{ascending:true}).limit(100).then(({data,error})=>{if(!error&&data?.length)setMessages(data.map(m=>({role:m.role==='user'?'user':'assistant',content:m.content})))})},[conversationId,supabase,session]);
+ const [text,setText]=useState(''),[busy,setBusy]=useState(false),[conversationId,setConversationId]=useState(null),[voiceLang,setVoiceLang]=useState('hi-IN'),[listening,setListening]=useState(false);
+ const storageKey=session?.user?.id&&household?.id?'homebuddy-ai-conversation-'+session.user.id+'-'+household.id:null;
+ useEffect(()=>{setMessages([{role:'assistant',content:'Hi! I’m your HomeBuddy assistant. You can ask me in English, Hindi or Hinglish. Try “kal subah 9 baje XYZ ka reminder laga do” or “milk aur bread shopping list mein add karo”.'}]);const stored=storageKey?localStorage.getItem(storageKey):null;setConversationId(stored);if(stored&&supabase&&session)supabase.from('ai_messages').select('role,content').eq('conversation_id',stored).eq('user_id',session.user.id).order('created_at',{ascending:true}).limit(100).then(({data,error})=>{if(!error&&data?.length)setMessages(data.map(m=>({role:m.role==='user'?'user':'assistant',content:m.content})))})},[storageKey]);
  const startVoice=()=>{const Speech=window.SpeechRecognition||window.webkitSpeechRecognition;if(!Speech){notice('Voice recognition is not supported in this browser. Use your phone keyboard microphone to dictate.');return}const recognition=new Speech();recognition.lang=voiceLang;recognition.interimResults=false;recognition.maxAlternatives=1;recognition.onstart=()=>setListening(true);recognition.onerror=()=>{setListening(false);notice('Could not recognise speech. Please try again or type your message.')};recognition.onend=()=>setListening(false);recognition.onresult=e=>{const spoken=e.results?.[0]?.[0]?.transcript||'';if(spoken)setText(v=>(v?v+' ':'')+spoken)};recognition.start()};
  const send=async()=>{
   const message=text.trim();if(!message||busy)return;
@@ -130,7 +131,7 @@ function AssistantChat({supabase,session,household,notice}){
   try{
    const {data,error}=await supabase.functions.invoke('homebuddy-ai',{body:{message,conversationId,requestId:crypto.randomUUID()}});
    if(error)throw error;
-   if(data?.conversationId){setConversationId(data.conversationId);localStorage.setItem('homebuddy-ai-conversation',data.conversationId)}
+   if(data?.conversationId){setConversationId(data.conversationId);storageKey&&localStorage.setItem(storageKey,data.conversationId)}
    if(data?.needsConfiguration)setMessages(m=>[...m,{role:'assistant',content:data.error||'AI is not configured yet.'}]);
    else if(data?.error)setMessages(m=>[...m,{role:'assistant',content:data.error}]);
    else setMessages(m=>[...m,{role:'assistant',content:data.reply||'I could not complete that request.'}]);
