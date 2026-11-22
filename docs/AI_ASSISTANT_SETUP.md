@@ -39,7 +39,7 @@ The deployed function reads secrets at request time; a redeploy is not normally 
 - Create and list family calendar events.
 - Add and list home assets.
 - Complete a uniquely matched pending task or shopping item; recurring tasks create their next due occurrence.
-- Upload documents directly from chat to the existing private Document Vault, and list household document metadata; file contents are not read by the assistant.
+- Upload, list and confirmation-delete documents directly through chat using the existing private Document Vault and Storage policies; file contents are not read by the assistant.
 - Delete a uniquely matched supported record only after a separate confirmation turn; database RLS and role policies still apply.
 - Update bills, reminders/tasks, shopping items, expenses, maintenance reminders, home assets and family events.
 
