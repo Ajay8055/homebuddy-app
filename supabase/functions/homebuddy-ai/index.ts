@@ -6,6 +6,13 @@ const str=(v,n=180)=>typeof v==="string"?v.trim().slice(0,n):"";
 const dateOk=v=>typeof v==="string"&&/^\d{4}-\d{2}-\d{2}$/.test(v)&&!Number.isNaN(Date.parse(v+"T00:00:00Z"));
 const money=v=>typeof v==="number"&&Number.isFinite(v)&&v>0&&v<=100000000?Number(v.toFixed(2)):null;
 const freq=v=>["none","weekly","monthly","yearly"].includes(String(v))?String(v):"none";
+function nextDue(date:string,frequency:string){
+ const [year,month,day]=date.split("-").map(Number);
+ if(frequency==="weekly")return new Date(Date.UTC(year,month-1,day+7)).toISOString().slice(0,10);
+ const targetMonth=month+(frequency==="monthly"?1:0),targetYear=year+(frequency==="yearly"?1:0);
+ const daysInTargetMonth=new Date(Date.UTC(targetYear,targetMonth,0)).getUTCDate();
+ return new Date(Date.UTC(targetYear,targetMonth-1,Math.min(day,daysInTargetMonth))).toISOString().slice(0,10);
+}
 const definitions=[
 {type:"function",function:{name:"add_shopping_item",description:"Add an item to the shared shopping list.",parameters:{type:"object",additionalProperties:false,required:["name"],properties:{name:{type:"string"},quantity:{type:"string"},allow_duplicate:{type:"boolean"}}}}},
 {type:"function",function:{name:"create_reminder",description:"Create a household reminder/task. Dates must be YYYY-MM-DD; due_at must be ISO 8601 with +05:30 timezone if user specified a time.",parameters:{type:"object",additionalProperties:false,required:["name"],properties:{name:{type:"string"},due_date:{type:"string"},due_at:{type:"string"},priority:{type:"string",enum:["low","normal","high"]},description:{type:"string"},recurrence_frequency:{type:"string",enum:["none","weekly","monthly","yearly"]},assigned_to_name:{type:"string"},allow_duplicate:{type:"boolean"}}}}},
@@ -83,12 +90,12 @@ async function action(db,uid,hid,n,a){
   const table=n==="complete_household_task"?"household_tasks":"shopping_items",done=n==="complete_household_task"?"is_done":"is_done";
   const {data:matches,error:findError}=await db.from(table).select("id,name,due_date,recurrence_frequency").eq("household_id",hid).eq(done,false).ilike("name",name).limit(2);if(findError)throw findError;if(!matches?.length)throw Error("I couldn't find a pending item named "+name+".");if(matches.length>1)throw Error("I found more than one matching item. Please specify which one.");
   const patch=n==="complete_household_task"?{is_done:true,completed_at:new Date().toISOString()}:{is_done:true};
-  const {data,error}=await db.from(table).update(patch).eq("id",matches[0].id).eq("household_id",hid).select("id,name,is_done").single();if(error)throw error;return {message:"Marked "+data.name+" as completed.",record:data};
+  const {data,error}=await db.from(table).update(patch).eq("id",matches[0].id).eq("household_id",hid).select("id,name,is_done").single();if(error)throw error;let nextOccurrence=null,warning=null;const prior=matches[0];if(n==="complete_household_task"&&prior.recurrence_frequency&&prior.recurrence_frequency!=="none"&&prior.due_date){const due=nextDue(prior.due_date,prior.recurrence_frequency),dueAt=prior.due_at?due+String(prior.due_at).slice(10):null;const {data:next,error:nextError}=await db.from("household_tasks").insert({household_id:hid,name:prior.name,due_label:due,due_date:due,due_at:dueAt,assigned_to:prior.assigned_to,priority:prior.priority||"normal",description:prior.description||"",recurrence_frequency:prior.recurrence_frequency,is_done:false}).select("id,name,due_date,due_at").single();if(nextError)warning="Task completed, but next recurrence could not be created: "+nextError.message;else nextOccurrence=next;}return {message:"Marked "+data.name+" as completed.",record:data,nextOccurrence,warning};
  }
  if(n==="mark_bill_paid"){
   const {data:matches,error:findError}=await db.from("bills").select("id,name,amount,due_date,recurrence_frequency").eq("household_id",hid).eq("is_paid",false).ilike("name",name).limit(2);if(findError)throw findError;if(!matches?.length)throw Error("I couldn't find an unpaid bill named "+name+".");if(matches.length>1)throw Error("I found more than one matching bill. Please specify which one.");
-  const bill=matches[0],{data,error}=await db.from("bills").update({is_paid:true,paid_at:new Date().toISOString()}).eq("id",bill.id).eq("household_id",hid).select("id,name,amount,is_paid").single();if(error)throw error;
-  return {message:"Marked "+data.name+" as paid in HomeBuddy. No money was transferred.",record:data};
+  const bill=matches[0],{data,error}=await db.from("bills").update({is_paid:true,paid_at:new Date().toISOString()}).eq("id",bill.id).eq("household_id",hid).select("id,name,amount,is_paid").single();if(error)throw error;let nextOccurrence=null,warning=null;if(bill.recurrence_frequency&&bill.recurrence_frequency!=="none"&&bill.due_date){const due=nextDue(bill.due_date,bill.recurrence_frequency);const {data:next,error:nextError}=await db.from("bills").insert({household_id:hid,name:bill.name,amount:bill.amount,due_date:due,is_paid:false,recurrence_frequency:bill.recurrence_frequency}).select("id,name,amount,due_date").single();if(nextError)warning="Bill marked paid, but next recurrence could not be created: "+nextError.message;else nextOccurrence=next;}
+  return {message:"Marked "+data.name+" as paid in HomeBuddy. No money was transferred.",record:data,nextOccurrence,warning};
  }
  if(n==="delete_household_record"){
   const map={shopping:"shopping_items",tasks:"household_tasks",bills:"bills",maintenance:"maintenance_reminders",events:"household_events",assets:"home_assets",shared_expenses:"shared_expenses",personal_expenses:"personal_expenses"};
