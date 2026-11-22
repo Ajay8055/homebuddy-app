@@ -111,3 +111,15 @@ test('household tasks expose an explicit complete action and allow reopening', a
   await expect(row.getByRole('button', { name: 'Mark Clean kitchen counters complete' })).toBeVisible();
   await expect(row.locator('b.struck')).toHaveCount(0);
 });
+
+
+test('maintenance service can be marked serviced and reopened', async ({ page }) => {
+  await page.getByRole('button', { name: /Maintenance/i }).first().click();
+  const row = page.locator('[data-record-id]').filter({ hasText: 'AC servicing' });
+  await expect(row).toBeVisible();
+  await row.getByRole('button', { name: 'Mark AC servicing serviced' }).click();
+  await expect(row.getByRole('button', { name: 'Reopen AC servicing service' })).toBeVisible();
+  await expect(row.locator('b.struck')).toContainText('AC servicing');
+  await row.getByRole('button', { name: 'Reopen AC servicing service' }).click();
+  await expect(row.getByRole('button', { name: 'Mark AC servicing serviced' })).toBeVisible();
+});
