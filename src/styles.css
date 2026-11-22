@@ -240,3 +240,9 @@ main{min-height:100dvh}
 .ai-chat-compose button{display:flex;align-items:center;gap:7px;white-space:nowrap}
 .ai-chat-foot{margin:12px 0 0}
 @media(max-width:640px){.ai-chat-panel{min-height:62vh}.ai-chat-messages{max-height:52vh}.ai-message{max-width:92%}.ai-chat-compose{position:sticky;bottom:0;background:#fff;padding-bottom:4px}.ai-chat-compose button{padding-inline:12px}}
+
+
+.ai-chat-document{display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding-top:12px;border-top:1px solid var(--line,#e7e9e5)}
+.ai-doc-pick{display:inline-flex;align-items:center;gap:7px;padding:10px 13px;border:1px solid #dfe5df;border-radius:10px;font-weight:650;cursor:pointer}
+.ai-doc-pick input{max-width:210px;font-size:12px}
+.ai-chat-document>input,.ai-chat-document>select{min-width:130px;max-width:220px;border:1px solid #dfe5df;border-radius:10px;padding:10px;font:inherit}
