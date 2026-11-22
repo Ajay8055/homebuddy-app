@@ -29,6 +29,12 @@ const definitions=[
 {type:"function",function:{name:"delete_household_record",description:"Permanently delete one record ONLY after the user explicitly confirmed deletion in the immediately previous assistant turn. Shared deletes may be restricted to the household owner.",parameters:{type:"object",additionalProperties:false,required:["module","name"],properties:{module:{type:"string",enum:["shopping","tasks","bills","maintenance","events","assets","shared_expenses","personal_expenses"]},name:{type:"string"}}}}},
 {type:"function",function:{name:"list_household_records",description:"List records from a supported household module.",parameters:{type:"object",additionalProperties:false,required:["module"],properties:{module:{type:"string",enum:["shopping","reminders","bills","tasks","expenses","personal_expenses","maintenance","documents","events","assets"]},status:{type:"string",enum:["pending","completed","all"]}}}}}
 ];
+async function actionKey(requestId:string,name:string,args:Record<string,unknown>){
+ const canonical=Object.keys(args).sort().map(k=>k+":"+JSON.stringify(args[k])).join("|");
+ const bytes=new TextEncoder().encode(requestId+":"+name+":"+canonical);
+ const digest=await crypto.subtle.digest("SHA-256",bytes);
+ return Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,"0")).join("");
+}
 async function action(db,uid,hid,n,a){
  const name=str(a.name);
  if(n!=="list_household_records"&&!name)throw Error("Please provide a name for this item.");
@@ -171,7 +177,7 @@ Deno.serve(async req=>{
     const previous=history?.slice(0,-1).reverse().find(m=>m.role==="assistant");
     if(!confirmed||!previous||!/(confirm|should i|shall i|are you sure|do you want)/i.test(previous.content||"")){results.push({error:"This action needs a clear confirmation first. Ask the user to confirm, then wait for their next message."});continue;}
    }
-   const keyId=requestId+":"+n;const {data:ledger,error:le}=await db.from("ai_action_requests").insert({user_id:user.id,household_id:hid,idempotency_key:keyId,action_type:n,status:"started"}).select("id").single();
+   const keyId=await actionKey(requestId,n,args);const {data:ledger,error:le}=await db.from("ai_action_requests").insert({user_id:user.id,household_id:hid,idempotency_key:keyId,action_type:n,status:"started"}).select("id").single();
    if(le?.code==="23505"){results.push({message:"This action request was already processed; I did not repeat it.",duplicateRequest:true});continue;}if(le)throw le;
    try{const r=await action(db,user.id,hid,n,args);const status=r.needs_confirmation?"needs_confirmation":"succeeded";const {error:ue}=await db.from("ai_action_requests").update({status,result:r}).eq("id",ledger.id);if(ue)throw ue;results.push(r);}
    catch(e){await db.from("ai_action_requests").update({status:"failed",result:{error:e instanceof Error?e.message:"Action failed"}}).eq("id",ledger.id);results.push({error:e instanceof Error?e.message:"Action failed"});}
