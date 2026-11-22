@@ -1,9 +1,9 @@
 name: HomeBuddy quality checks
 on:
   push:
-    branches: [main]
+    branches: [main, feature/homebuddy-conversational-ai]
   pull_request:
-    branches: [main]
+    branches: [main, feature/native-android-expo]
   workflow_dispatch:
   schedule:
     - cron: '0 3 * * *'
