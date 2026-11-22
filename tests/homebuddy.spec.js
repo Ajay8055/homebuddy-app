@@ -80,10 +80,10 @@ test('completing a recurring task keeps a completed record and creates its next 
   await page.getByRole('button', { name: /Household tasks/i }).first().click();
   const rows = page.locator('[data-record-id]').filter({ hasText: 'Automation recurring task' });
   await expect(rows).toHaveCount(1);
-  await rows.locator('button.tick').click();
+  await rows.locator('button.task-complete-action').click();
   await expect(rows).toHaveCount(2);
-  await expect(rows.locator('button.tick.done')).toHaveCount(1);
-  await expect(rows.locator('button.tick:not(.done)')).toHaveCount(1);
+  await expect(rows.locator('button.task-complete-action.done')).toHaveCount(1);
+  await expect(rows.locator('button.task-complete-action:not(.done)')).toHaveCount(1);
 });
 
 
