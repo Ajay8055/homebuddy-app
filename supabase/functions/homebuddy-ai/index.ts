@@ -16,6 +16,9 @@ const definitions=[
 {type:"function",function:{name:"create_family_event",description:"Add a family calendar event or appointment.",parameters:{type:"object",additionalProperties:false,required:["name","starts_at"],properties:{name:{type:"string"},starts_at:{type:"string",description:"ISO 8601 timestamp with timezone offset, or YYYY-MM-DD for all-day event"},description:{type:"string"},all_day:{type:"boolean"},recurrence_frequency:{type:"string",enum:["none","weekly","monthly","yearly"]}}}}},
 {type:"function",function:{name:"add_home_asset",description:"Add a home asset such as an appliance, vehicle or furniture item.",parameters:{type:"object",additionalProperties:false,required:["name"],properties:{name:{type:"string"},category:{type:"string"},brand_model:{type:"string"},purchase_date:{type:"string"},warranty_until:{type:"string"},service_interval_months:{type:"integer"},notes:{type:"string"}}}}},
 {type:"function",function:{name:"create_maintenance_reminder",description:"Create a home maintenance reminder.",parameters:{type:"object",additionalProperties:false,required:["name"],properties:{name:{type:"string"},details:{type:"string"},service_date:{type:"string"},recurrence_frequency:{type:"string",enum:["none","monthly","yearly"]}}}}},
+{type:"function",function:{name:"update_shopping_item",description:"Update the name or quantity of one uniquely matched shopping item.",parameters:{type:"object",additionalProperties:false,required:["name"],properties:{name:{type:"string"},new_name:{type:"string"},quantity:{type:"string"}}}}},
+{type:"function",function:{name:"update_household_task",description:"Update one uniquely matched household reminder/task, including its date, assignee or priority.",parameters:{type:"object",additionalProperties:false,required:["name"],properties:{name:{type:"string"},new_name:{type:"string"},due_date:{type:"string"},priority:{type:"string",enum:["low","normal","high"]},description:{type:"string"},assigned_to_name:{type:"string"},clear_assignee:{type:"boolean"}}}}},
+{type:"function",function:{name:"update_bill",description:"Update the details, amount or due date of one household bill. This does not pay the bill.",parameters:{type:"object",additionalProperties:false,required:["name"],properties:{name:{type:"string"},new_name:{type:"string"},amount:{type:"number"},due_date:{type:"string"}}}}},
 {type:"function",function:{name:"complete_household_task",description:"Mark one uniquely named pending household task or reminder as complete.",parameters:{type:"object",additionalProperties:false,required:["name"],properties:{name:{type:"string"}}}}},
 {type:"function",function:{name:"complete_shopping_item",description:"Mark one uniquely named pending shopping item as done.",parameters:{type:"object",additionalProperties:false,required:["name"],properties:{name:{type:"string"}}}}},
 {type:"function",function:{name:"mark_bill_paid",description:"Mark one bill as paid ONLY after the user explicitly confirmed this exact change in the immediately previous assistant turn.",parameters:{type:"object",additionalProperties:false,required:["name"],properties:{name:{type:"string"}}}}},
@@ -25,6 +28,26 @@ const definitions=[
 async function action(db,uid,hid,n,a){
  const name=str(a.name);
  if(n!=="list_household_records"&&!name)throw Error("Please provide a name for this item.");
+ if(n==="update_shopping_item"||n==="update_household_task"||n==="update_bill"){
+  const table=n==="update_shopping_item"?"shopping_items":n==="update_household_task"?"household_tasks":"bills";
+  const {data:matches,error:findError}=await db.from(table).select("id,name").eq("household_id",hid).ilike("name",name).limit(2);if(findError)throw findError;if(!matches?.length)throw Error("I couldn't find an item named "+name+".");if(matches.length>1)throw Error("More than one item matches. Please specify which one.");
+  const patch:Record<string,unknown>={};
+  if(a.new_name!==undefined){const v=str(a.new_name);if(!v)throw Error("The new name cannot be empty.");patch[n==="update_bill"||n==="update_shopping_item"||n==="update_household_task"?"name":"name"]=v;}
+  if(n==="update_shopping_item"&&a.quantity!==undefined)patch.quantity=str(a.quantity,80);
+  if(n==="update_household_task"){
+   if(a.due_date!==undefined){if(a.due_date&&!dateOk(a.due_date))throw Error("Please specify a valid due date.");patch.due_date=a.due_date||null;patch.due_label=a.due_date||"Today";}
+   if(a.priority!==undefined){if(!["low","normal","high"].includes(String(a.priority)))throw Error("Invalid priority.");patch.priority=a.priority;}
+   if(a.description!==undefined)patch.description=str(a.description,1000);
+   if(a.clear_assignee===true)patch.assigned_to=null;
+   else if(a.assigned_to_name!==undefined){const {data:roster,error:re}=await db.rpc("get_household_members");if(re)throw re;const matches= (roster||[]).filter(m=>str(m.display_name||m.email||m.name,100).toLowerCase()===str(a.assigned_to_name,100).toLowerCase());if(matches.length!==1)throw Error(matches.length?"More than one family member matches.":"I couldn't find that household member.");patch.assigned_to=matches[0].user_id;}
+  }
+  if(n==="update_bill"){
+   if(a.amount!==undefined){const amount=money(a.amount);if(amount===null)throw Error("Please provide a valid bill amount.");patch.amount=amount;}
+   if(a.due_date!==undefined){if(a.due_date&&!dateOk(a.due_date))throw Error("Please specify a valid bill due date.");patch.due_date=a.due_date||null;}
+  }
+  if(!Object.keys(patch).length)throw Error("Tell me what detail you want to change.");
+  const {data,error}=await db.from(table).update(patch).eq("id",matches[0].id).eq("household_id",hid).select("id,name").single();if(error)throw error;return {message:"Updated "+data.name+".",record:data};
+ }
  if(n==="complete_household_task"||n==="complete_shopping_item"){
   const table=n==="complete_household_task"?"household_tasks":"shopping_items",done=n==="complete_household_task"?"is_done":"is_done";
   const {data:matches,error:findError}=await db.from(table).select("id,name,due_date,recurrence_frequency").eq("household_id",hid).eq(done,false).ilike("name",name).limit(2);if(findError)throw findError;if(!matches?.length)throw Error("I couldn't find a pending item named "+name+".");if(matches.length>1)throw Error("I found more than one matching item. Please specify which one.");
