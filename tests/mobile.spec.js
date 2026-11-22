@@ -40,7 +40,7 @@ test('mobile drawer opens the HomeBuddy AI chat and keeps its composer usable', 
   await page.goto('/');
   await page.getByRole('button', { name: /open menu/i }).click();
   await page.getByRole('button', { name: /HomeBuddy AI/i }).last().click();
-  await expect(page.getByRole('heading', { name: 'HomeBuddy AI' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'HomeBuddy AI' }).last()).toBeVisible();
   await expect(page.getByLabel('Message HomeBuddy')).toBeVisible();
   await expect(page.getByRole('button', { name: /Send/i })).toBeVisible();
 });
