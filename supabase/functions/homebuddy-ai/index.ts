@@ -114,12 +114,11 @@ async function action(db,uid,hid,n,a){
   const {data,error}=await db.from("shopping_items").insert({household_id:hid,name,quantity:str(a.quantity,80)}).select("id,name,quantity,is_done").single();if(error)throw error;return {message:"Added "+data.name+" to the shopping list.",record:data};
  }
  if(n==="create_reminder"||n==="create_household_task"){
-  const due=a.due_date?(dateOk(a.due_date)?a.due_date:null):null;if(a.due_date&&!due)throw Error("I couldn't understand that date. Please specify it again.");
+  const dueAt=str(a.due_at,80);if(dueAt&&Number.isNaN(Date.parse(dueAt)))throw Error("I couldn't understand that reminder time.");const recurrence=freq(a.recurrence_frequency);const todayLocal=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Kolkata"}).format(new Date());const due=a.due_date?(dateOk(a.due_date)?a.due_date:null):dueAt?dueAt.slice(0,10):recurrence!=="none"?todayLocal:null;if(a.due_date&&!due)throw Error("I couldn't understand that date. Please specify it again.");
   let assigned=null;const assignedName=str(a.assigned_to_name,100);
   if(assignedName){const {data,error}=await db.rpc("get_household_members");if(error)throw error;const matches=(data||[]).filter(m=>str(m.display_name||m.email||m.name,100).toLowerCase()===assignedName.toLowerCase());if(matches.length!==1)throw Error(matches.length?"More than one family member matches. Please clarify.":"I couldn't find a household member named "+assignedName+".");assigned=matches[0].user_id;}
-  const dueAt=str(a.due_at,80);if(dueAt&&Number.isNaN(Date.parse(dueAt)))throw Error("I couldn't understand that reminder time.");
   const {data:dups,error:de}=await db.from("household_tasks").select("id,name,due_date").eq("household_id",hid).eq("is_done",false).ilike("name",name).limit(1);if(de)throw de;if(dups?.length&&!a.allow_duplicate)return {needs_confirmation:true,message:"A pending reminder/task named "+dups[0].name+" already exists. Should I add another one?",duplicate:dups[0]};
-  const row={household_id:hid,name,due_label:due||"Today",due_date:due,assigned_to:assigned,priority:["low","normal","high"].includes(a.priority)?a.priority:"normal",description:str(a.description,1000),recurrence_frequency:freq(a.recurrence_frequency),is_done:false};if(dueAt)row.due_at=dueAt;
+  const row={household_id:hid,name,due_label:due||"Today",due_date:due,assigned_to:assigned,priority:["low","normal","high"].includes(a.priority)?a.priority:"normal",description:str(a.description,1000),recurrence_frequency:recurrence,is_done:false};if(dueAt)row.due_at=dueAt;
   const {data,error}=await db.from("household_tasks").insert(row).select("id,name,due_date,due_at,priority,assigned_to,recurrence_frequency").single();if(error)throw error;return {message:"Created reminder: "+data.name+(due?" for "+due:"")+".",record:data};
  }
  if(n==="create_bill"){
