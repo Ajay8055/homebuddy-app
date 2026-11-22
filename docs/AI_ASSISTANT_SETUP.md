@@ -32,15 +32,16 @@ The deployed function reads secrets at request time; a redeploy is not normally 
 - Create, update, complete and list reminders/tasks, including optional date, exact time and family-member assignment.
 - Assign a task to an exact existing household member name.
 - Create, update and list bills; bill creation never transfers money.
-- Mark a uniquely matched bill as paid only after a separate confirmation turn; this only updates HomeBuddy's record.
+- Mark a uniquely matched bill as paid only after a separate confirmation turn; recurring bills create their next due record, and no money is transferred.
 - Record and update shared and private expenses in separate tables.
 - Create and update maintenance reminders, optionally linked to an existing home asset.
 - Update family calendar events and home assets.
 - Create and list family calendar events.
 - Add and list home assets.
-- Complete a uniquely matched pending task or shopping item.
+- Complete a uniquely matched pending task or shopping item; recurring tasks create their next due occurrence.
 - List household document metadata; file contents are not read by the assistant.
 - Delete a uniquely matched supported record only after a separate confirmation turn; database RLS and role policies still apply.
+- Update bills, reminders/tasks, shopping items, expenses, maintenance reminders, home assets and family events.
 
 The assistant does not initiate payments, transfer household ownership, change family membership, or inspect document contents.
 
