@@ -35,3 +35,12 @@ test('long forms remain scrollable and their save action is reachable on short s
   await modal.evaluate(el => { el.scrollTop = el.scrollHeight; });
   await expect(modal.getByRole('button', { name: 'Save' })).toBeVisible();
 });
+
+test('mobile drawer opens the HomeBuddy AI chat and keeps its composer usable', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: /open menu/i }).click();
+  await page.getByRole('button', { name: /HomeBuddy AI/i }).last().click();
+  await expect(page.getByRole('heading', { name: 'HomeBuddy AI' })).toBeVisible();
+  await expect(page.getByLabel('Message HomeBuddy')).toBeVisible();
+  await expect(page.getByRole('button', { name: /Send/i })).toBeVisible();
+});
