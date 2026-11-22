@@ -7,9 +7,9 @@ const dateOk=v=>typeof v==="string"&&/^\d{4}-\d{2}-\d{2}$/.test(v)&&!Number.isNa
 const money=v=>typeof v==="number"&&Number.isFinite(v)&&v>0&&v<=100000000?Number(v.toFixed(2)):null;
 const freq=v=>["none","weekly","monthly","yearly"].includes(String(v))?String(v):"none";
 const definitions=[
-{type:"function",function:{name:"add_shopping_item",description:"Add an item to the shared shopping list.",parameters:{type:"object",additionalProperties:false,required:["name"],properties:{name:{type:"string"},quantity:{type:"string"}}}}},
-{type:"function",function:{name:"create_reminder",description:"Create a household reminder/task. Dates must be YYYY-MM-DD; due_at must be ISO 8601 with +05:30 timezone if user specified a time.",parameters:{type:"object",additionalProperties:false,required:["name"],properties:{name:{type:"string"},due_date:{type:"string"},due_at:{type:"string"},priority:{type:"string",enum:["low","normal","high"]},description:{type:"string"},recurrence_frequency:{type:"string",enum:["none","weekly","monthly","yearly"]},assigned_to_name:{type:"string"}}}}},
-{type:"function",function:{name:"create_bill",description:"Add a bill due item; never make a payment.",parameters:{type:"object",additionalProperties:false,required:["name","amount"],properties:{name:{type:"string"},amount:{type:"number"},due_date:{type:"string"},recurrence_frequency:{type:"string",enum:["none","weekly","monthly","yearly"]}}}}},
+{type:"function",function:{name:"add_shopping_item",description:"Add an item to the shared shopping list.",parameters:{type:"object",additionalProperties:false,required:["name"],properties:{name:{type:"string"},quantity:{type:"string"},allow_duplicate:{type:"boolean"}}}}},
+{type:"function",function:{name:"create_reminder",description:"Create a household reminder/task. Dates must be YYYY-MM-DD; due_at must be ISO 8601 with +05:30 timezone if user specified a time.",parameters:{type:"object",additionalProperties:false,required:["name"],properties:{name:{type:"string"},due_date:{type:"string"},due_at:{type:"string"},priority:{type:"string",enum:["low","normal","high"]},description:{type:"string"},recurrence_frequency:{type:"string",enum:["none","weekly","monthly","yearly"]},assigned_to_name:{type:"string"},allow_duplicate:{type:"boolean"}}}}},
+{type:"function",function:{name:"create_bill",description:"Add a bill due item; never make a payment.",parameters:{type:"object",additionalProperties:false,required:["name","amount"],properties:{name:{type:"string"},amount:{type:"number"},due_date:{type:"string"},recurrence_frequency:{type:"string",enum:["none","weekly","monthly","yearly"]},allow_duplicate:{type:"boolean"}}}}},
 {type:"function",function:{name:"create_household_task",description:"Create a household task and optionally assign it to a family member.",parameters:{type:"object",additionalProperties:false,required:["name"],properties:{name:{type:"string"},due_date:{type:"string"},assigned_to_name:{type:"string"},priority:{type:"string",enum:["low","normal","high"]},description:{type:"string"},recurrence_frequency:{type:"string",enum:["none","weekly","monthly","yearly"]}}}}},
 {type:"function",function:{name:"record_shared_expense",description:"Record an expense shared with the household.",parameters:{type:"object",additionalProperties:false,required:["name","amount"],properties:{name:{type:"string"},amount:{type:"number"},category:{type:"string"},expense_date:{type:"string"},notes:{type:"string"}}}}},
 {type:"function",function:{name:"record_personal_expense",description:"Record a private expense visible only to the signed-in user.",parameters:{type:"object",additionalProperties:false,required:["name","amount"],properties:{name:{type:"string"},amount:{type:"number"},category:{type:"string"},expense_date:{type:"string"}}}}},
@@ -92,6 +92,7 @@ async function action(db,uid,hid,n,a){
   let d=db.from(table).delete().eq("id",matches[0].id).eq("household_id",hid);if(a.module==="personal_expenses")d=d.eq("user_id",uid);const {data:deleted,error}=await d.select("id").maybeSingle();if(error)throw error;if(!deleted)throw Error("I found the record, but your household permissions do not allow deleting it. Ask the household owner.");return {message:"Deleted "+name+".",record:{id:matches[0].id,name:matches[0][nameColumn]}};
  }
  if(n==="add_shopping_item"){
+  const {data:dups,error:de}=await db.from("shopping_items").select("id,name,quantity").eq("household_id",hid).eq("is_done",false).ilike("name",name).limit(1);if(de)throw de;if(dups?.length&&!a.allow_duplicate)return {needs_confirmation:true,message:"A pending shopping item named "+dups[0].name+" is already on the list. Should I add another one?",duplicate:dups[0]};
   const {data,error}=await db.from("shopping_items").insert({household_id:hid,name,quantity:str(a.quantity,80)}).select("id,name,quantity,is_done").single();if(error)throw error;return {message:"Added "+data.name+" to the shopping list.",record:data};
  }
  if(n==="create_reminder"||n==="create_household_task"){
@@ -99,13 +100,13 @@ async function action(db,uid,hid,n,a){
   let assigned=null;const assignedName=str(a.assigned_to_name,100);
   if(assignedName){const {data,error}=await db.rpc("get_household_members");if(error)throw error;const matches=(data||[]).filter(m=>str(m.display_name||m.email||m.name,100).toLowerCase()===assignedName.toLowerCase());if(matches.length!==1)throw Error(matches.length?"More than one family member matches. Please clarify.":"I couldn't find a household member named "+assignedName+".");assigned=matches[0].user_id;}
   const dueAt=str(a.due_at,80);if(dueAt&&Number.isNaN(Date.parse(dueAt)))throw Error("I couldn't understand that reminder time.");
-  const {data:dups,error:de}=await db.from("household_tasks").select("id,name,due_date").eq("household_id",hid).eq("is_done",false).ilike("name",name).limit(1);if(de)throw de;if(dups?.length)return {needs_confirmation:true,message:"A pending reminder/task named "+dups[0].name+" already exists. Should I add another one?",duplicate:dups[0]};
+  const {data:dups,error:de}=await db.from("household_tasks").select("id,name,due_date").eq("household_id",hid).eq("is_done",false).ilike("name",name).limit(1);if(de)throw de;if(dups?.length&&!a.allow_duplicate)return {needs_confirmation:true,message:"A pending reminder/task named "+dups[0].name+" already exists. Should I add another one?",duplicate:dups[0]};
   const row={household_id:hid,name,due_label:due||"Today",due_date:due,assigned_to:assigned,priority:["low","normal","high"].includes(a.priority)?a.priority:"normal",description:str(a.description,1000),recurrence_frequency:freq(a.recurrence_frequency),is_done:false};if(dueAt)row.due_at=dueAt;
   const {data,error}=await db.from("household_tasks").insert(row).select("id,name,due_date,due_at,priority,assigned_to,recurrence_frequency").single();if(error)throw error;return {message:"Created reminder: "+data.name+(due?" for "+due:"")+".",record:data};
  }
  if(n==="create_bill"){
   const amount=money(a.amount);if(amount===null)throw Error("Please specify a valid bill amount.");const due=a.due_date?(dateOk(a.due_date)?a.due_date:null):null;if(a.due_date&&!due)throw Error("Please specify a valid bill due date.");
-  const {data:dups,error:de}=await db.from("bills").select("id,name,amount,due_date").eq("household_id",hid).eq("is_paid",false).ilike("name",name).eq("amount",amount).limit(1);if(de)throw de;if(dups?.length)return {needs_confirmation:true,message:"A pending "+name+" bill for ₹"+amount+" already exists. Should I add another one?",duplicate:dups[0]};
+  const {data:dups,error:de}=await db.from("bills").select("id,name,amount,due_date").eq("household_id",hid).eq("is_paid",false).ilike("name",name).eq("amount",amount).limit(1);if(de)throw de;if(dups?.length&&!a.allow_duplicate)return {needs_confirmation:true,message:"A pending "+name+" bill for ₹"+amount+" already exists. Should I add another one?",duplicate:dups[0]};
   const {data,error}=await db.from("bills").insert({household_id:hid,name,amount,due_date:due,is_paid:false,recurrence_frequency:freq(a.recurrence_frequency)}).select("id,name,amount,due_date,is_paid").single();if(error)throw error;return {message:"Added "+name+" bill for ₹"+amount+(due?", due "+due:"")+". No payment was made.",record:data};
  }
  if(n==="record_shared_expense"||n==="record_personal_expense"){
@@ -160,6 +161,11 @@ Deno.serve(async req=>{
   const completion=await response.json(),assistant=completion?.choices?.[0]?.message||{},calls=assistant.tool_calls||[],results=[];
   for(const call of calls.slice(0,3)){
    const n=call?.function?.name;if(!definitions.some(t=>t.function.name===n))continue;let args;try{args=JSON.parse(call.function.arguments||"{}");}catch{results.push({error:"Invalid action details. Please rephrase."});continue;}
+   if(args.allow_duplicate===true){
+    const confirmed=/^(yes|yeah|yep|confirm|please do|go ahead|haan|han|ji|kar do|theek hai|do it|proceed)\\b/i.test(message);
+    const previous=history?.slice(0,-1).reverse().find(m=>m.role==="assistant");
+    if(!confirmed||!previous||!/(already|duplicate|add another|same item|same bill|same reminder)/i.test(previous.content||"")){results.push({error:"Ask the user to confirm adding a duplicate, then wait for their next message."});continue;}
+   }
    if(n==="mark_bill_paid"||n==="delete_household_record"){
     const confirmed=/^(yes|yeah|yep|confirm|please do|go ahead|haan|han|ji|kar do|theek hai|do it|proceed)\b/i.test(message);
     const previous=history?.slice(0,-1).reverse().find(m=>m.role==="assistant");
