@@ -101,7 +101,7 @@ Deno.serve(async req=>{
   for(const call of calls.slice(0,3)){
    const n=call?.function?.name;if(!definitions.some(t=>t.function.name===n))continue;let args;try{args=JSON.parse(call.function.arguments||"{}");}catch{results.push({error:"Invalid action details. Please rephrase."});continue;}
    if(n==="mark_bill_paid"||n==="delete_household_record"){
-    const confirmed=/^(yes|yeah|yep|confirm|please do|go ahead|haan|han|ji|kar do|theek hai|do it|proceed)\\b/i.test(message);
+    const confirmed=/^(yes|yeah|yep|confirm|please do|go ahead|haan|han|ji|kar do|theek hai|do it|proceed)\b/i.test(message);
     const previous=history?.slice(0,-1).reverse().find(m=>m.role==="assistant");
     if(!confirmed||!previous||!/(confirm|should i|shall i|are you sure|do you want)/i.test(previous.content||"")){results.push({error:"This action needs a clear confirmation first. Ask the user to confirm, then wait for their next message."});continue;}
    }
