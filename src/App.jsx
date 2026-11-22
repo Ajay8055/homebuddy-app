@@ -136,7 +136,7 @@ function AssistantChat({supabase,session,household,notice}){
    if(data?.needsConfiguration)setMessages(m=>[...m,{role:'assistant',content:data.error||'AI is not configured yet.'}]);
    else if(data?.error)setMessages(m=>[...m,{role:'assistant',content:data.error}]);
    else setMessages(m=>[...m,{role:'assistant',content:data.reply||'I could not complete that request.'}]);
-  }catch(e){setMessages(m=>[...m,{role:'assistant',content:e?.message||'Could not reach HomeBuddy AI. Please try again.'}]);}
+  }catch(e){let message=e?.message||'Could not reach HomeBuddy AI. Please try again.';try{const payload=await e?.context?.json();if(payload?.error)message=payload.error}catch{}setMessages(m=>[...m,{role:'assistant',content:message}]);}
   finally{setBusy(false)}
  };
  return <section className="panel full ai-chat-panel">
