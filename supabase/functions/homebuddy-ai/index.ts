@@ -130,7 +130,9 @@ async function action(db,uid,hid,n,a){
  if(n==="record_shared_expense"||n==="record_personal_expense"){
   const amount=money(a.amount);if(amount===null)throw Error("Please specify an expense amount greater than zero.");const date=a.expense_date?(dateOk(a.expense_date)?a.expense_date:null):new Date().toLocaleDateString("en-CA",{timeZone:"Asia/Kolkata"});if(!date)throw Error("Please specify a valid expense date.");
   const personal=n==="record_personal_expense",table=personal?"personal_expenses":"shared_expenses";
-  const row=personal?{household_id:hid,user_id:uid,name,amount,category:str(a.category,60)||"Other",expense_date:date}:{household_id:hid,name,amount,category:str(a.category,60)||"Other",expense_date:date,notes:str(a.notes,500)};
+  let paidBy=uid;
+  if(!personal&&a.paid_by_name){const {data:roster,error:re}=await db.rpc("get_household_members");if(re)throw re;const matches=(roster||[]).filter(m=>str(m.display_name||m.email||m.name,100).toLowerCase()===str(a.paid_by_name,100).toLowerCase());if(matches.length!==1)throw Error(matches.length?"More than one family member matches the payer name.":"I couldn't find that household member as the payer.");paidBy=matches[0].user_id;}
+  const row=personal?{household_id:hid,user_id:uid,name,amount,category:str(a.category,60)||"Other",expense_date:date}:{household_id:hid,name,amount,category:str(a.category,60)||"Other",expense_date:date,paid_by:paidBy,notes:str(a.notes,500)};
   const {data,error}=await db.from(table).insert(row).select("id,name,amount,category,expense_date").single();if(error)throw error;return {message:"Recorded "+(personal?"personal":"shared")+" expense "+name+" for ₹"+amount+".",record:data};
  }
  if(n==="create_family_event"){
