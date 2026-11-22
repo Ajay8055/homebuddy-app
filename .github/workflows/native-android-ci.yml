@@ -1,7 +1,7 @@
 name: Native Android CI
 on:
   pull_request:
-    branches: [main, feature/native-android-expo]
+    branches: [main]
     paths:
       - 'mobile/**'
       - '.github/workflows/native-android-ci.yml'
