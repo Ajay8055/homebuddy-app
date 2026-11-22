@@ -96,3 +96,18 @@ test('short desktop screens can scroll the complete sidebar navigation', async (
   await sidebar.evaluate(el => { el.scrollTop = el.scrollHeight; });
   await expect(sidebar.getByRole('button', { name: 'Family', exact: true })).toBeVisible();
 });
+
+
+test('household tasks expose an explicit complete action and allow reopening', async ({ page }) => {
+  await page.getByRole('button', { name: /Household tasks/i }).first().click();
+  const row = page.locator('[data-record-id]').filter({ hasText: 'Clean kitchen counters' });
+  await expect(row).toBeVisible();
+  const complete = row.getByRole('button', { name: 'Mark Clean kitchen counters complete' });
+  await expect(complete).toBeVisible();
+  await complete.click();
+  await expect(row.getByRole('button', { name: 'Reopen Clean kitchen counters' })).toBeVisible();
+  await expect(row.locator('b.struck')).toContainText('Clean kitchen counters');
+  await row.getByRole('button', { name: 'Reopen Clean kitchen counters' }).click();
+  await expect(row.getByRole('button', { name: 'Mark Clean kitchen counters complete' })).toBeVisible();
+  await expect(row.locator('b.struck')).toHaveCount(0);
+});
