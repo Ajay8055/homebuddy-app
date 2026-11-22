@@ -88,10 +88,19 @@ drop policy if exists "Users view their own AI action requests" on public.ai_act
 create policy "Users view their own AI action requests"
   on public.ai_action_requests for select to authenticated
   using (user_id = (select auth.uid()) and private.is_household_member(household_id));
+drop policy if exists "Users create their own AI action requests" on public.ai_action_requests;
+create policy "Users create their own AI action requests"
+  on public.ai_action_requests for insert to authenticated
+  with check (user_id = (select auth.uid()) and private.is_household_member(household_id));
+drop policy if exists "Users update their own AI action requests" on public.ai_action_requests;
+create policy "Users update their own AI action requests"
+  on public.ai_action_requests for update to authenticated
+  using (user_id = (select auth.uid()) and private.is_household_member(household_id))
+  with check (user_id = (select auth.uid()) and private.is_household_member(household_id));
 
 grant select, insert, update, delete on public.ai_conversations to authenticated;
 grant select, insert, update, delete on public.ai_messages to authenticated;
-grant select on public.ai_action_requests to authenticated;
+grant select, insert, update on public.ai_action_requests to authenticated;
 
 create or replace function public.touch_ai_conversation()
 returns trigger language plpgsql set search_path = pg_catalog, public
