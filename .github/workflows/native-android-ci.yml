@@ -11,6 +11,9 @@ on:
       - 'mobile/**'
       - '.github/workflows/native-android-ci.yml'
   workflow_dispatch:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   android-debug:
     runs-on: ubuntu-latest
