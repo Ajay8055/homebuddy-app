@@ -226,3 +226,31 @@ main{min-height:100dvh}
 .household-settings-heading{padding:2px 0 4px}
 .settings-readonly{grid-template-columns:minmax(0,1fr)}
 @media(max-width:700px){.household-settings{gap:10px}.household-setting-card{grid-template-columns:minmax(0,1fr);align-items:stretch}.invite-code-row,.household-setting-actions{justify-content:flex-start}.household-setting-actions select{width:100%}.household-setting-actions button,.archive-button,.delete-household-button{width:100%}}
+
+
+.ai-chat-panel{display:flex;flex-direction:column;min-height:68vh}
+.ai-chat-messages{display:flex;flex-direction:column;gap:12px;padding:18px 2px;min-height:320px;max-height:55vh;overflow-y:auto}
+.ai-message{max-width:min(82%,680px);padding:12px 15px;border:1px solid var(--line,#e7e9e5);border-radius:15px;background:#fff}
+.ai-message small{display:block;font-size:10px;font-weight:800;letter-spacing:.04em;color:#748078;margin-bottom:5px}
+.ai-message p{margin:0;white-space:pre-wrap;line-height:1.55;font-size:14px;color:#25352b}
+.ai-user{align-self:flex-end;background:#eaf3eb;border-color:#d8e7da}
+.ai-assistant{align-self:flex-start}
+.ai-chat-compose{display:flex;gap:9px;padding-top:12px;border-top:1px solid var(--line,#e7e9e5)}
+.ai-chat-compose input{flex:1;min-width:0;border:1px solid #dfe5df;border-radius:12px;padding:13px 14px;font:inherit}
+.ai-chat-compose button{display:flex;align-items:center;gap:7px;white-space:nowrap}
+.ai-chat-foot{margin:12px 0 0}
+@media(max-width:640px){.ai-chat-panel{min-height:62vh}.ai-chat-messages{max-height:52vh}.ai-message{max-width:92%}.ai-chat-compose{position:sticky;bottom:0;background:#fff;padding-bottom:4px}.ai-chat-compose button{padding-inline:12px}}
+
+
+.ai-chat-document{display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding-top:12px;border-top:1px solid var(--line,#e7e9e5)}
+.ai-doc-pick{display:inline-flex;align-items:center;gap:7px;padding:10px 13px;border:1px solid #dfe5df;border-radius:10px;font-weight:650;cursor:pointer}
+.ai-doc-pick input{max-width:210px;font-size:12px}
+.ai-chat-document>input,.ai-chat-document>select{min-width:130px;max-width:220px;border:1px solid #dfe5df;border-radius:10px;padding:10px;font:inherit}
+
+
+/* Explicit task completion controls */
+.task-complete-action{display:inline-flex;align-items:center;justify-content:center;gap:6px;flex-shrink:0;border:1px solid #cbd9cd;background:#f2f7f1;color:#476d52;border-radius:8px;padding:7px 10px;font-size:10px;font-weight:700;white-space:nowrap;min-height:32px}
+.task-complete-action:hover{background:#e5f0e5;border-color:#8eaa91}
+.task-complete-action.done{background:#edf1ed;border-color:#d9e1d9;color:#718074}
+.task-complete-action.compact{padding:5px 7px;min-height:28px;font-size:9px}
+.task-complete-action:focus-visible{outline:3px solid #9bb9a0;outline-offset:2px}

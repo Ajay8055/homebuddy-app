@@ -80,10 +80,10 @@ test('completing a recurring task keeps a completed record and creates its next 
   await page.getByRole('button', { name: /Household tasks/i }).first().click();
   const rows = page.locator('[data-record-id]').filter({ hasText: 'Automation recurring task' });
   await expect(rows).toHaveCount(1);
-  await rows.locator('button.tick').click();
+  await rows.locator('button.task-complete-action').click();
   await expect(rows).toHaveCount(2);
-  await expect(rows.locator('button.tick.done')).toHaveCount(1);
-  await expect(rows.locator('button.tick:not(.done)')).toHaveCount(1);
+  await expect(rows.locator('button.task-complete-action.done')).toHaveCount(1);
+  await expect(rows.locator('button.task-complete-action:not(.done)')).toHaveCount(1);
 });
 
 
@@ -95,4 +95,31 @@ test('short desktop screens can scroll the complete sidebar navigation', async (
   expect(canScroll).toBeTruthy();
   await sidebar.evaluate(el => { el.scrollTop = el.scrollHeight; });
   await expect(sidebar.getByRole('button', { name: 'Family', exact: true })).toBeVisible();
+});
+
+
+test('household tasks expose an explicit complete action and allow reopening', async ({ page }) => {
+  await page.getByRole('button', { name: /Household tasks/i }).first().click();
+  const row = page.locator('[data-record-id]').filter({ hasText: 'Clean kitchen counters' });
+  await expect(row).toBeVisible();
+  const complete = row.getByRole('button', { name: 'Mark Clean kitchen counters complete' });
+  await expect(complete).toBeVisible();
+  await complete.click();
+  await expect(row.getByRole('button', { name: 'Reopen Clean kitchen counters' })).toBeVisible();
+  await expect(row.locator('b.struck')).toContainText('Clean kitchen counters');
+  await row.getByRole('button', { name: 'Reopen Clean kitchen counters' }).click();
+  await expect(row.getByRole('button', { name: 'Mark Clean kitchen counters complete' })).toBeVisible();
+  await expect(row.locator('b.struck')).toHaveCount(0);
+});
+
+
+test('maintenance service can be marked serviced and reopened', async ({ page }) => {
+  await page.getByRole('button', { name: /Maintenance/i }).first().click();
+  const row = page.locator('[data-record-id]').filter({ hasText: 'AC servicing' });
+  await expect(row).toBeVisible();
+  await row.getByRole('button', { name: 'Mark AC servicing serviced' }).click();
+  await expect(row.getByRole('button', { name: 'Reopen AC servicing service' })).toBeVisible();
+  await expect(row.locator('b.struck')).toContainText('AC servicing');
+  await row.getByRole('button', { name: 'Reopen AC servicing service' }).click();
+  await expect(row.getByRole('button', { name: 'Mark AC servicing serviced' })).toBeVisible();
 });
