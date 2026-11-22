@@ -33,8 +33,9 @@ The deployed function reads secrets at request time; a redeploy is not normally 
 - Assign a task to an exact existing household member name.
 - Create, update and list bills; bill creation never transfers money.
 - Mark a uniquely matched bill as paid only after a separate confirmation turn; this only updates HomeBuddy's record.
-- Record shared and private expenses in separate tables.
-- Create and list maintenance reminders, optionally linked to an existing home asset.
+- Record and update shared and private expenses in separate tables.
+- Create and update maintenance reminders, optionally linked to an existing home asset.
+- Update family calendar events and home assets.
 - Create and list family calendar events.
 - Add and list home assets.
 - Complete a uniquely matched pending task or shopping item.
