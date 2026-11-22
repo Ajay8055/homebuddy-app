@@ -7,7 +7,7 @@ test.beforeEach(async ({ page }) => {
 
 test('HomeBuddy AI page explains supported chat languages and actions', async ({ page }) => {
   await page.getByRole('button', { name: /HomeBuddy AI/i }).first().click();
-  await expect(page.getByRole('heading', { name: 'HomeBuddy AI' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'HomeBuddy AI' }).last()).toBeVisible();
   await expect(page.getByText(/English · हिन्दी · Hinglish/i)).toBeVisible();
   await expect(page.getByPlaceholder(/Kal 9 baje gas booking/i)).toBeVisible();
 });
