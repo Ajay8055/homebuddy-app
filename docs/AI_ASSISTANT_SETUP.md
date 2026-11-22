@@ -28,13 +28,15 @@ The deployed function reads secrets at request time; a redeploy is not normally 
 
 ## Current supported assistant actions
 
-- Add and list shopping items.
-- Create and list reminders/tasks, including optional date and exact time.
+- Add, update, complete and list shopping items.
+- Create, update, complete and list reminders/tasks, including optional date, exact time and family-member assignment.
 - Assign a task to an exact existing household member name.
-- Create and list bills; bill creation never transfers money.
+- Create, update and list bills; bill creation never transfers money.
 - Mark a uniquely matched bill as paid only after a separate confirmation turn; this only updates HomeBuddy's record.
 - Record shared and private expenses in separate tables.
-- Create and list maintenance reminders.
+- Create and list maintenance reminders, optionally linked to an existing home asset.
+- Create and list family calendar events.
+- Add and list home assets.
 - Complete a uniquely matched pending task or shopping item.
 - List household document metadata; file contents are not read by the assistant.
 - Delete a uniquely matched supported record only after a separate confirmation turn; database RLS and role policies still apply.
