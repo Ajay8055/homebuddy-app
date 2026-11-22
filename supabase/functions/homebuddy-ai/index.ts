@@ -36,10 +36,10 @@ async function action(db,uid,hid,n,a){
  }
  if(n==="delete_household_record"){
   const map={shopping:"shopping_items",tasks:"household_tasks",bills:"bills",maintenance:"maintenance_reminders",events:"household_events",assets:"home_assets",shared_expenses:"shared_expenses",personal_expenses:"personal_expenses"};
-  const table=map[String(a.module)];if(!table)throw Error("That record type cannot be deleted here.");
-  let q=db.from(table).select("id,name").eq("household_id",hid).ilike("name",name).limit(2);if(a.module==="personal_expenses")q=q.eq("user_id",uid);
+  const table=map[String(a.module)];if(!table)throw Error("That record type cannot be deleted here.");const nameColumn=a.module==="events"?"title":"name";
+  let q=db.from(table).select("id,"+nameColumn).eq("household_id",hid).ilike(nameColumn,name).limit(2);if(a.module==="personal_expenses")q=q.eq("user_id",uid);
   const {data:matches,error:findError}=await q;if(findError)throw findError;if(!matches?.length)throw Error("I couldn't find a record named "+name+".");if(matches.length>1)throw Error("More than one record matches. Please specify which one.");
-  let d=db.from(table).delete().eq("id",matches[0].id).eq("household_id",hid);if(a.module==="personal_expenses")d=d.eq("user_id",uid);const {error}=await d;if(error)throw error;return {message:"Deleted "+name+".",record:{id:matches[0].id,name}};
+  let d=db.from(table).delete().eq("id",matches[0].id).eq("household_id",hid);if(a.module==="personal_expenses")d=d.eq("user_id",uid);const {error}=await d;if(error)throw error;return {message:"Deleted "+name+".",record:{id:matches[0].id,name:matches[0][nameColumn]}};
  }
  if(n==="add_shopping_item"){
   const {data,error}=await db.from("shopping_items").insert({household_id:hid,name,quantity:str(a.quantity,80)}).select("id,name,quantity,is_done").single();if(error)throw error;return {message:"Added "+data.name+" to the shopping list.",record:data};
