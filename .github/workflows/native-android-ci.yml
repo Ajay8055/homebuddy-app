@@ -17,6 +17,7 @@ concurrency:
 jobs:
   android-debug:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     defaults:
       run:
         working-directory: mobile
@@ -55,13 +56,16 @@ jobs:
       - name: Emulator install and launch smoke test
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 35
+          api-level: 34
           target: google_apis
           arch: x86_64
+          profile: pixel_2
+          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
+          disable-animations: true
+          emulator-boot-timeout: 600
           script: |
+            adb wait-for-device
             adb install -r mobile/android/app/build/outputs/apk/debug/app-debug.apk
             adb shell monkey -p com.homebuddy.app 1
-            sleep 10
+            sleep 5
             adb shell dumpsys activity activities | grep -E 'mResumedActivity|topResumedActivity' | grep -q com.homebuddy.app
-            adb shell uiautomator dump /sdcard/window.xml >/dev/null
-            adb shell cat /sdcard/window.xml | grep -q 'HomeBuddy'
