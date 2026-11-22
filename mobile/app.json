@@ -18,7 +18,18 @@
       ]
     },
     "plugins": [
-      "expo-notifications"
+      "expo-notifications",
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Allow HomeBuddy to use your microphone for voice commands.",
+          "speechRecognitionPermission": "Allow HomeBuddy to convert your speech into household commands.",
+          "androidSpeechServicePackages": [
+            "com.google.android.googlequicksearchbox",
+            "com.google.android.tts"
+          ]
+        }
+      ]
     ]
   }
 }
