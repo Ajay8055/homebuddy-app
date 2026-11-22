@@ -168,7 +168,7 @@ Deno.serve(async req=>{
   const {count:recentCount,error:rateError}=await db.from("ai_messages").select("id",{count:"exact",head:true}).eq("user_id",user.id).gte("created_at",new Date(Date.now()-60000).toISOString());if(rateError)throw rateError;if((recentCount||0)>=15)return out({error:"You are sending messages too quickly. Please wait a minute and try again."},429);
   const {data:dupe}=await db.from("ai_messages").select("id").eq("conversation_id",conversationId).eq("user_id",user.id).contains("metadata",{request_id:requestId}).limit(1).maybeSingle();if(dupe)return out({conversationId,duplicateRequest:true,reply:"I have already received this message. Check the conversation before retrying."});
   const {error:saveError}=await db.from("ai_messages").insert({conversation_id:conversationId,user_id:user.id,role:"user",content:message,metadata:{request_id:requestId}});if(saveError)throw saveError;
-  const key=Deno.env.get("AI_API_KEY");if(!key)return out({conversationId,needsConfiguration:true,error:"Your message is saved, but the AI provider key is not configured. No household action was executed."},503);
+  const key=Deno.env.get("AI_API_KEY");if(!key)return out({conversationId,needsConfiguration:true,error:"Your message is saved, but the AI provider key is not configured. No household action was executed."});
   const base=(Deno.env.get("AI_BASE_URL")||"https://api.openai.com/v1").replace(/\/$/,""),model=Deno.env.get("AI_MODEL")||"gpt-4o-mini";
   const {data:history,error:he}=await db.from("ai_messages").select("role,content").eq("conversation_id",conversationId).eq("user_id",user.id).order("created_at",{ascending:true}).limit(20);if(he)throw he;
   const now=new Date().toLocaleString("en-IN",{timeZone:"Asia/Kolkata"});
