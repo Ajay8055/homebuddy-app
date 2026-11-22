@@ -111,3 +111,15 @@ test('assistant offers Hindi and English voice input controls', async ({ page })
   await page.getByLabel('Voice language').selectOption('en-IN');
   await expect(page.getByLabel('Voice language')).toHaveValue('en-IN');
 });
+
+test('assistant chat exposes Document Vault attachment and naming controls', async ({ page }) => {
+  await page.getByRole('button', { name: /HomeBuddy AI/i }).first().click();
+  await page.locator('.ai-doc-pick input[type="file"]').setInputFiles({
+    name: 'warranty.pdf',
+    mimeType: 'application/pdf',
+    buffer: Buffer.from('test document')
+  });
+  await expect(page.getByLabel('Uploaded document name')).toHaveValue('warranty');
+  await expect(page.getByLabel('Uploaded document category')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Upload to Vault' })).toBeVisible();
+});
