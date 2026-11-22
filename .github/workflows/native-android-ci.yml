@@ -1,11 +1,12 @@
 name: Native Android CI
 on:
   pull_request:
+    branches: [main, feature/native-android-expo]
     paths:
       - 'mobile/**'
       - '.github/workflows/native-android-ci.yml'
   push:
-    branches: [main]
+    branches: [main, feature/homebuddy-conversational-ai]
     paths:
       - 'mobile/**'
       - '.github/workflows/native-android-ci.yml'
