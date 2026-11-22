@@ -41,7 +41,7 @@ async function action(db,uid,hid,n,a){
   const table=map[String(a.module)];if(!table)throw Error("That record type cannot be deleted here.");const nameColumn=a.module==="events"?"title":"name";
   let q=db.from(table).select("id,"+nameColumn).eq("household_id",hid).ilike(nameColumn,name).limit(2);if(a.module==="personal_expenses")q=q.eq("user_id",uid);
   const {data:matches,error:findError}=await q;if(findError)throw findError;if(!matches?.length)throw Error("I couldn't find a record named "+name+".");if(matches.length>1)throw Error("More than one record matches. Please specify which one.");
-  let d=db.from(table).delete().eq("id",matches[0].id).eq("household_id",hid);if(a.module==="personal_expenses")d=d.eq("user_id",uid);const {error}=await d;if(error)throw error;return {message:"Deleted "+name+".",record:{id:matches[0].id,name:matches[0][nameColumn]}};
+  let d=db.from(table).delete().eq("id",matches[0].id).eq("household_id",hid);if(a.module==="personal_expenses")d=d.eq("user_id",uid);const {data:deleted,error}=await d.select("id").maybeSingle();if(error)throw error;if(!deleted)throw Error("I found the record, but your household permissions do not allow deleting it. Ask the household owner.");return {message:"Deleted "+name+".",record:{id:matches[0].id,name:matches[0][nameColumn]}};
  }
  if(n==="add_shopping_item"){
   const {data,error}=await db.from("shopping_items").insert({household_id:hid,name,quantity:str(a.quantity,80)}).select("id,name,quantity,is_done").single();if(error)throw error;return {message:"Added "+data.name+" to the shopping list.",record:data};
