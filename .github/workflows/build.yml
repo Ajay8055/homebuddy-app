@@ -1,12 +1,15 @@
 name: HomeBuddy quality checks
 on:
   push:
-    branches: [main]
+    branches: [main, feature/homebuddy-conversational-ai]
   pull_request:
     branches: [main]
   workflow_dispatch:
   schedule:
     - cron: '0 3 * * *'
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   quality:
     runs-on: ubuntu-latest
@@ -20,3 +23,4 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npm run build
       - run: npm run test:e2e
+      - run: npm run test:ai-auth

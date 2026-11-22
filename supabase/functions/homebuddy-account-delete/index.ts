@@ -45,7 +45,7 @@ Deno.serve(async (req: Request) => {
 
     const { data: memberships, error: membershipError } = await userClient
       .from("household_members")
-      .select("household_id")
+      .select("household_id,role")
       .eq("user_id", user.id)
       .limit(2);
     if (membershipError) throw new Error(membershipError.message);
@@ -63,17 +63,24 @@ Deno.serve(async (req: Request) => {
 
     let exitDisposition: string | null = null;
     if (actualHouseholdId) {
-      const { data: disposition, error: exitError } = await userClient.rpc("prepare_household_owner_exit", {
-        target_household_id: actualHouseholdId,
-        transfer_to_user_id: transferToUserId,
-      });
-      if (exitError) throw new Error(exitError.message);
-      exitDisposition = disposition;
+      const { data: otherMembers, error: otherMembersError } = await userClient
+        .from("household_members").select("user_id")
+        .eq("household_id", actualHouseholdId).neq("user_id", user.id);
+      if (otherMembersError) throw new Error(otherMembersError.message);
+      if ((otherMembers ?? []).length === 0 && !transferToUserId) {
+        // A final member deleting their account must not leave an orphaned household.
+        exitDisposition = "delete_empty_household";
+      } else {
+        const { data: disposition, error: exitError } = await userClient.rpc("prepare_household_owner_exit", {
+          target_household_id: actualHouseholdId,
+          transfer_to_user_id: transferToUserId,
+        });
+        if (exitError) throw new Error(exitError.message);
+        exitDisposition = disposition;
+      }
     }
 
-    // Deleting the auth user cascades their private expenses, notifications,
-    // device subscriptions and membership. Shared records are retained and
-    // their author/payer references become NULL through ON DELETE SET NULL.
+    // Remove the Auth identity only after the household ownership transition succeeds.
     const { error: deleteError } = await adminClient.auth.admin.deleteUser(user.id);
     if (deleteError) {
       if (exitDisposition === "archived" || exitDisposition === "transferred") {
@@ -89,7 +96,49 @@ Deno.serve(async (req: Request) => {
       throw new Error(deleteError.message);
     }
 
-    return new Response(JSON.stringify({ success: true, householdDisposition: transferToUserId ? "transferred" : "archived_or_member_exit" }), {
+    let emptyHouseholdCleanupWarning = false;
+    if (exitDisposition === "delete_empty_household" && actualHouseholdId) {
+      try {
+        const bucket = adminClient.storage.from("homebuddy-documents");
+        const { data: folders, error: listError } = await bucket.list(actualHouseholdId, { limit: 1000 });
+        if (listError) throw listError;
+        for (const folder of (folders ?? []).filter((x:any) => !x.id)) {
+          const { data: files, error: filesError } = await bucket.list(actualHouseholdId + "/" + folder.name, { limit: 1000 });
+          if (filesError) throw filesError;
+          const paths = (files ?? []).filter((x:any) => x.id).map((x:any) => actualHouseholdId + "/" + folder.name + "/" + x.name);
+          if (paths.length) { const { error } = await bucket.remove(paths); if (error) throw error; }
+        }
+        const { error: householdDeleteError } = await adminClient.from("households").delete().eq("id", actualHouseholdId);
+        if (householdDeleteError) throw householdDeleteError;
+      } catch (e) {
+        emptyHouseholdCleanupWarning = true;
+        console.error("Account deleted; empty household cleanup needs attention", e);
+      }
+    }
+
+    // These tables intentionally do not all have auth.users foreign keys. Clean
+    // up user-owned rows explicitly after Auth deletion; preserve shared records.
+    const cleanup = await Promise.allSettled([
+      adminClient.from("household_members").delete().eq("user_id", user.id),
+      adminClient.from("personal_expenses").delete().eq("user_id", user.id),
+      adminClient.from("notifications").delete().eq("user_id", user.id),
+      adminClient.from("notification_preferences").delete().eq("user_id", user.id),
+      adminClient.from("notification_subscriptions").delete().eq("user_id", user.id),
+      adminClient.from("native_push_tokens").delete().eq("user_id", user.id),
+      adminClient.from("bills").update({ created_by: null }).eq("created_by", user.id),
+      adminClient.from("household_tasks").update({ created_by: null }).eq("created_by", user.id),
+      adminClient.from("household_tasks").update({ assigned_to: null }).eq("assigned_to", user.id),
+      adminClient.from("household_events").update({ created_by: null }).eq("created_by", user.id),
+      adminClient.from("maintenance_reminders").update({ created_by: null }).eq("created_by", user.id),
+      adminClient.from("home_assets").update({ created_by: null }).eq("created_by", user.id),
+      adminClient.from("household_documents").update({ uploaded_by: null }).eq("uploaded_by", user.id),
+      adminClient.from("shared_expenses").update({ created_by: null }).eq("created_by", user.id),
+      adminClient.from("shared_expenses").update({ paid_by: null }).eq("paid_by", user.id),
+    ]);
+    const cleanupFailures = cleanup.filter(x => x.status === "rejected" || (x.status === "fulfilled" && x.value?.error)).length;
+    if (cleanupFailures) console.error("Account deleted; some related rows need cleanup", cleanupFailures);
+
+    return new Response(JSON.stringify({ success: true, householdDisposition: exitDisposition === "delete_empty_household" ? "deleted" : transferToUserId ? "transferred" : "archived_or_member_exit", cleanupWarnings: cleanupFailures + (emptyHouseholdCleanupWarning ? 1 : 0) }), {
       status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
