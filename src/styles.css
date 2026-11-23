@@ -289,3 +289,89 @@ main{min-height:100dvh}
  .ai-chat-compose .ai-language{flex-basis:60px;width:60px}
  .ai-send-button{width:40px;min-width:40px}
 }
+
+
+/* HomeBuddy visual refresh — warm, premium, mobile-first */
+:root{font-family:'DM Sans',sans-serif;color:#26372d;background:#f5f7f2;font-synthesis:none;--hb-green:#557765;--hb-deep:#294c3a;--hb-sage:#e9f0e8;--hb-line:#e7ece5;--hb-muted:#7c897f}
+body{background:#f5f7f2;color:#26372d}
+.side{width:264px;padding:30px 19px 22px;background:#fbfcf9;border-right:1px solid #e8eee6;box-shadow:5px 0 30px #2d4b3506}
+.brand{padding:0 8px 40px;font:800 22px Manrope,sans-serif;letter-spacing:-1.1px;color:#294c3a;text-transform:none}
+.brandmark{width:42px;height:42px;border-radius:15px;background:linear-gradient(145deg,#688d76,#365e48);box-shadow:0 6px 16px #55776535;margin-right:12px}
+.brandmark svg{width:23px;height:23px;stroke-width:2.25}
+.dot{color:#91ad91}
+.side>.overline{padding:0 12px 13px;color:#a0aaa0;font-size:9px;letter-spacing:1.8px}
+.nav{padding:12px 13px;border-radius:11px;gap:13px;color:#718076;font-size:12.5px;font-weight:600;margin:3px 0;transition:background .18s,color .18s}
+.nav:hover{background:#f0f4ee;color:#355d43}
+.nav.selected{background:#e8f0e7;color:#345d43;box-shadow:inset 3px 0 #668b70}
+.nav.selected svg{stroke-width:2.3}
+.side-note{background:linear-gradient(145deg,#eef4eb,#e4eee3);border:1px solid #e2ebdf;border-radius:16px;padding:17px;color:#52745b}
+.side-note b{font:700 12px Manrope,sans-serif}
+.user{padding:18px 4px 0}
+.user>span{background:#e5eee4;color:#42694c}
+main{margin-left:264px}
+header{height:68px;background:#fbfcf9eF;border-bottom:1px solid #e8eee6;padding:0 4.2%;color:#8a958c;backdrop-filter:blur(14px)}
+.crumb{color:#738176;font-weight:600}
+.content{max-width:1320px;padding:38px 4.2% 30px}
+.welcome{margin-bottom:27px;align-items:flex-end}
+.welcome .overline{color:#829b84;font-size:9px;letter-spacing:1.9px}
+.welcome h1{font:800 clamp(25px,2.7vw,34px) Manrope,sans-serif;letter-spacing:-1.4px;color:#263d2e;margin:9px 0 7px}
+.welcome p{font-size:13px;color:#89968b}
+.primary{background:linear-gradient(135deg,#63856d,#456b52);border-radius:11px;padding:12px 17px;box-shadow:0 5px 13px #55776522;font-size:12px;transition:transform .18s,box-shadow .18s}
+.primary:hover{transform:translateY(-1px);box-shadow:0 8px 18px #55776530}
+.calendar-shortcut,.home-shortcut,.secondary{border:1px solid #e1e9df;background:#fbfcf9;color:#557765;border-radius:10px;padding:11px 14px;font-size:11px;font-weight:600;display:inline-flex;align-items:center;gap:8px}
+.stats{gap:15px;margin-bottom:17px}
+.stat,.panel{border:1px solid #e8eee6;border-radius:17px;box-shadow:0 5px 20px #314b3707;background:#fff}
+.stat{padding:19px 20px;position:relative;overflow:hidden;min-height:130px}
+.stat:after{content:"";position:absolute;width:84px;height:84px;border-radius:50%;right:-28px;top:-30px;background:#f2f6f0}
+.stat>span{width:38px;height:38px;border-radius:12px;background:#edf4eb;color:#557765;position:relative;z-index:1}
+.stat small{font-size:10px;letter-spacing:.15px;color:#8a978c}
+.stat>b{font:800 27px Manrope,sans-serif;letter-spacing:-.8px;color:#2d4534;margin:7px 0 3px}
+.grid{gap:16px}
+.panel{padding:21px 22px}
+.panel h2{font:750 15px Manrope,sans-serif;color:#304536;letter-spacing:-.25px}
+.panelhead{margin-bottom:13px}
+.panelhead p,.sub{font-size:11px;color:#929e93;line-height:1.55}
+.item{padding:12px 0;border-color:#f0f3ee;font-size:12px;color:#45564a}
+.tick{border-radius:7px}
+.tick.done{background:#6d9073;border-color:#6d9073}
+.bill{padding:11px 0;border-color:#f0f3ee}
+.bill-icon{width:36px;height:36px;border-radius:12px;background:#eff4ed;color:#5b7c62}
+.bill b{font-size:12px;color:#405344}
+.bill small{font-size:10px}
+.quick{margin-top:17px;background:linear-gradient(110deg,#eaf2e8,#f0f5ed);border:1px solid #e3ece1;border-radius:16px;padding:17px 19px}
+.quick>span{width:40px;height:40px;border-radius:13px;background:#d9e8d8;color:#4c7656}
+.quick b{font:700 12px Manrope,sans-serif;color:#35543e}
+.quick small{color:#829183}
+.quick input{border:1px solid #dfe8dc;background:#fff;border-radius:10px;padding:12px 13px;font-size:12px}
+.quick>button{background:#557765;border-radius:9px;padding:11px 14px;font-weight:600}
+.full{min-height:390px}
+.listrow{padding:15px 4px;border-color:#edf1eb}
+.listrow:hover{background:#fbfcf9}
+.rowtext b{font-size:12px;color:#3c5142}
+.demo-banner{background:#fff8e9;border-color:#f1e6ce;border-radius:11px;padding:11px 14px}
+.notice-bar{border-radius:10px}
+.modal{border-radius:18px;box-shadow:0 20px 60px #1b302344}
+.modal input{border-radius:10px}
+footer{color:#a1aca2}
+.invite-card{border:1px solid #e5ede3;border-radius:14px}
+@media(max-width:1000px){.side{width:225px}main{margin-left:225px}}
+@media(max-width:700px){
+ .side{display:none}main{margin-left:0}
+ header{height:58px;padding:0 15px}
+ .content{padding:24px 15px 22px}
+ .welcome{align-items:flex-start;margin-bottom:21px}
+ .welcome h1{font-size:23px;line-height:1.2;max-width:330px}
+ .welcome p{font-size:11px;line-height:1.5}
+ .welcome-actions{gap:7px;flex-wrap:wrap;justify-content:flex-end}
+ .calendar-shortcut{display:none}
+ .stats{gap:9px}
+ .stat{min-height:118px;padding:14px;border-radius:14px}
+ .stat>b{font-size:23px}
+ .grid{gap:11px}
+ .panel{padding:17px 16px;border-radius:15px}
+ .quick{padding:14px;gap:10px}
+ .quick>div{min-width:0}
+ .quick input{flex-basis:100%;margin:0}
+ .quick>button{flex:1;justify-content:center}
+ .full{min-height:300px}
+}
