@@ -185,7 +185,7 @@ Deno.serve(async req=>{
   if(!response.ok){
    const raw=await response.text();let providerError:Record<string,unknown>={};
    try{const parsed=JSON.parse(raw);providerError=parsed?.error||parsed||{};}catch{}
-   const safe=(v:unknown)=>String(v||"").replaceAll(key,"[redacted]").replace(/Bearer\\s+\\S+/gi,"Bearer [redacted]").slice(0,500);
+   const safe=(v:unknown)=>String(v||"").replaceAll(key,"[redacted]").replace(/Bearer\s+\S+/gi,"Bearer [redacted]").slice(0,500);
    console.error("AI_PROVIDER_HTTP_ERROR",JSON.stringify({status:response.status,code:safe(providerError.code),type:safe(providerError.type),message:safe(providerError.message),host:(()=>{try{return new URL(base).host}catch{return "invalid-base-url"}})(),model}));
    const message=response.status===401||response.status===403?"HomeBuddy AI provider authentication failed. Please check the AI provider key configuration.":response.status===429?"HomeBuddy AI provider quota or rate limit reached. Please check provider usage and billing.":response.status===404?"HomeBuddy AI model or API endpoint was not found. Please check AI_MODEL and AI_BASE_URL.":"HomeBuddy AI provider is temporarily unavailable. Please retry shortly.";
    return out({conversationId,error:message},502);
