@@ -254,3 +254,37 @@ main{min-height:100dvh}
 .task-complete-action.done{background:#edf1ed;border-color:#d9e1d9;color:#718074}
 .task-complete-action.compact{padding:5px 7px;min-height:28px;font-size:9px}
 .task-complete-action:focus-visible{outline:3px solid #9bb9a0;outline-offset:2px}
+
+
+/* HomeBuddy AI: text-first composer with a compact microphone control. */
+.ai-chat-compose{align-items:center;gap:10px}
+.ai-chat-compose .ai-language{flex:0 0 88px;width:88px;min-width:0;border:1px solid #dfe5df;border-radius:10px;background:#fff;color:#526258;padding:10px 7px;font:inherit;font-size:12px}
+.ai-chat-input-wrap{position:relative;display:flex;align-items:center;flex:1 1 auto;min-width:0}
+.ai-chat-input-wrap input{width:100%;min-height:48px;padding:13px 48px 13px 15px!important;border:1px solid #cfdacf!important;border-radius:13px!important;background:#fff;font-size:14px!important;box-shadow:0 1px 3px rgba(30,50,35,.04)}
+.ai-chat-input-wrap input:focus{outline:none;border-color:#789780!important;box-shadow:0 0 0 3px rgba(85,119,101,.12)}
+.ai-mic-icon{position:absolute;right:7px;top:50%;transform:translateY(-50%);width:36px;min-width:36px;height:36px;min-height:36px;padding:0;border:0;border-radius:10px;background:transparent;color:#5b7764;display:grid;place-items:center}
+.ai-mic-icon:hover{background:#edf4ed}
+.ai-mic-icon:disabled{color:#b06a48;cursor:default}
+.ai-listening-dot{width:11px;height:11px;border-radius:50%;background:#c56b52;box-shadow:0 0 0 5px rgba(197,107,82,.14);animation:aiPulse 1.1s ease-in-out infinite}
+.ai-send-button{flex:0 0 auto;min-height:46px;padding:0 15px}
+.homebuddy-fab{position:fixed;right:max(22px,env(safe-area-inset-right));bottom:calc(24px + env(safe-area-inset-bottom));z-index:25;display:flex;align-items:center;justify-content:center;gap:9px;min-height:54px;padding:0 18px;border:0;border-radius:999px;background:#557765;color:#fff;box-shadow:0 8px 26px rgba(35,67,46,.25);font:700 13px 'DM Sans',sans-serif;cursor:pointer;transition:transform .16s ease,box-shadow .16s ease}
+.homebuddy-fab:hover{transform:translateY(-2px);box-shadow:0 11px 30px rgba(35,67,46,.3)}
+.homebuddy-fab:focus-visible,.ai-mic-icon:focus-visible{outline:3px solid #9bb9a0;outline-offset:3px}
+@keyframes aiPulse{50%{opacity:.55;transform:scale(.82)}}
+@media(max-width:640px){
+ .ai-chat-compose{display:flex;gap:7px;padding:10px 0 calc(7px + env(safe-area-inset-bottom));}
+ .ai-chat-compose .ai-language{flex:0 0 66px;width:66px;padding:9px 3px;font-size:11px}
+ .ai-chat-input-wrap input{min-height:48px;padding-left:12px!important;font-size:16px!important}
+ .ai-send-button{width:44px;min-width:44px;min-height:44px;padding:0}
+ .ai-send-button span{display:none}
+ .ai-send-button svg{width:19px;height:19px}
+ .homebuddy-fab{right:16px;bottom:calc(18px + env(safe-area-inset-bottom));width:54px;min-width:54px;height:54px;min-height:54px;padding:0}
+ .homebuddy-fab span{display:none}
+ .homebuddy-fab svg{width:25px;height:25px}
+ .ai-chat-messages{padding-bottom:16px}
+}
+@media(max-width:360px){
+ .ai-chat-compose{gap:5px}
+ .ai-chat-compose .ai-language{flex-basis:60px;width:60px}
+ .ai-send-button{width:40px;min-width:40px}
+}
