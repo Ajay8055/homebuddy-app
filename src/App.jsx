@@ -118,7 +118,7 @@ function Modal({type,close,save,setPage,page,members=[],userId}){
 
 function AssistantChat({supabase,session,household,notice}){
  const [messages,setMessages]=useState([{role:'assistant',content:'Hi! I’m your HomeBuddy assistant. You can ask me in English, Hindi or Hinglish. Try “kal subah 9 baje AC service ka reminder laga do” or “milk aur bread shopping list mein add karo”.'}]);
- const [text,setText]=useState(''),[busy,setBusy]=useState(false),[conversationId,setConversationId]=useState(null),[voiceLang,setVoiceLang]=useState('hi-IN'),[listening,setListening]=useState(false),[docFile,setDocFile]=useState(null),[docName,setDocName]=useState(''),[docCategory,setDocCategory]=useState('Other'),[uploadBusy,setUploadBusy]=useState(false),recognitionRef=useRef(null),silenceTimerRef=useRef(null),voiceAutoSendRef=useRef(true);
+ const [text,setText]=useState(''),[busy,setBusy]=useState(false),[conversationId,setConversationId]=useState(null),[voiceLang,setVoiceLang]=useState('hi-IN'),[listening,setListening]=useState(false),[docFile,setDocFile]=useState(null),[docName,setDocName]=useState(''),[docCategory,setDocCategory]=useState('Other'),[uploadBusy,setUploadBusy]=useState(false),recognitionRef=useRef(null),silenceTimerRef=useRef(null);
  const storageKey=session?.user?.id&&household?.id?'homebuddy-ai-conversation-'+session.user.id+'-'+household.id:null;
  useEffect(()=>{setMessages([{role:'assistant',content:'Hi! I’m your HomeBuddy assistant. You can ask me in English, Hindi or Hinglish. Try “kal subah 9 baje XYZ ka reminder laga do” or “milk aur bread shopping list mein add karo”.'}]);const stored=storageKey?localStorage.getItem(storageKey):null;setConversationId(stored);if(stored&&supabase&&session)supabase.from('ai_messages').select('role,content').eq('conversation_id',stored).eq('user_id',session.user.id).order('created_at',{ascending:true}).limit(100).then(({data,error})=>{if(!error&&data?.length)setMessages(data.map(m=>({role:m.role==='user'?'user':'assistant',content:m.content})))})},[storageKey]);
  const uploadChatDocument=async()=>{if(!docFile||!docName.trim()||uploadBusy)return;if(!supabase||!session||!household){notice('Sign in to upload documents securely.');return}const allowed=['application/pdf','image/jpeg','image/png','image/webp','application/vnd.openxmlformats-officedocument.wordprocessingml.document'];if(docFile.size>10*1024*1024){notice('File must be 10 MB or smaller.');return}if(!allowed.includes(docFile.type)){notice('Allowed formats: PDF, JPG, PNG, WEBP and DOCX.');return}setUploadBusy(true);try{const path=household.id+'/'+session.user.id+'/'+crypto.randomUUID()+'-'+docFile.name.replace(/[^a-zA-Z0-9._-]/g,'_');const {error:up}=await supabase.storage.from('homebuddy-documents').upload(path,docFile,{contentType:docFile.type,upsert:false});if(up)throw up;const {error:row}=await supabase.from('household_documents').insert({household_id:household.id,name:docName.trim(),category:docCategory,storage_path:path,mime_type:docFile.type,file_size:docFile.size,uploaded_by:session.user.id});if(row){await supabase.storage.from('homebuddy-documents').remove([path]);throw row}setMessages(m=>[...m,{role:'assistant',content:'Uploaded “'+docName.trim()+'” to your Document Vault. I can search its details, but I do not read the file contents.'}]);setDocFile(null);setDocName('');setDocCategory('Other');notice('Document uploaded to your household vault.')}catch(e){notice('Document upload failed: '+(e?.message||'Please try again.'))}finally{setUploadBusy(false)}};
@@ -133,15 +133,15 @@ function AssistantChat({supabase,session,household,notice}){
   if(!window.isSecureContext){notice('Voice input requires a secure HTTPS connection. Open the HomeBuddy HTTPS address and try again.');return}
   const recognition=new Speech();
   let finalTranscript='';
+  let latestInterim='';
   let hadError=false;
   const prefix=text.trim();
-  voiceAutoSendRef.current=true;
   recognitionRef.current=recognition;
   recognition.lang=voiceLang;
   recognition.interimResults=true;
   recognition.continuous=false;
   recognition.maxAlternatives=1;
-  recognition.onstart=()=>{setListening(true);notice('Listening… Speak now. HomeBuddy will automatically stop after a short pause and send your message.');};
+  recognition.onstart=()=>{setListening(true);notice('Listening… Speak now. HomeBuddy will stop after a short pause. Review your text, then tap Send.');};
   recognition.onresult=e=>{
    let interim='';
    for(let i=e.resultIndex;i<e.results.length;i++){
@@ -149,12 +149,13 @@ function AssistantChat({supabase,session,household,notice}){
     if(e.results[i].isFinal)finalTranscript+=part;
     else interim+=part;
    }
-   const combined=[prefix,finalTranscript,interim].filter(Boolean).join(' ').trim();
+   latestInterim=interim;
+   const combined=[prefix,finalTranscript,latestInterim].filter(Boolean).join(' ').trim();
    if(combined)setText(combined);
    clearVoiceTimer();
    silenceTimerRef.current=setTimeout(()=>{
     if(recognitionRef.current===recognition){try{recognition.stop()}catch{}}
-   },1800);
+   },2200);
   };
   recognition.onerror=e=>{
    hadError=true;
@@ -175,11 +176,9 @@ function AssistantChat({supabase,session,household,notice}){
    clearVoiceTimer();
    setListening(false);
    if(recognitionRef.current===recognition)recognitionRef.current=null;
-   const message=[prefix,finalTranscript.trim()].filter(Boolean).join(' ').trim();
-   const shouldSend=voiceAutoSendRef.current&&!hadError;
-   voiceAutoSendRef.current=true;
-   if(shouldSend&&message)send(message);
-   else if(shouldSend&&!message)notice('I did not catch that. Tap the mic and try speaking again.');
+   const message=[prefix,finalTranscript.trim(),latestInterim.trim()].filter(Boolean).join(' ').trim();
+   if(message)setText(message);
+   else if(!hadError)notice('I did not catch that. Tap the mic and try again.');
   };
   try{recognition.start()}catch(e){clearVoiceTimer();recognitionRef.current=null;setListening(false);notice('Could not start the microphone: '+(e?.message||'Please check microphone permission.'))}
  };
