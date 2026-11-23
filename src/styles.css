@@ -257,6 +257,7 @@ main{min-height:100dvh}
 
 
 /* HomeBuddy AI: text-first composer with a compact microphone control. */
+.ai-recording-status{display:flex;align-items:center;gap:11px;flex:0 0 100%;width:100%;box-sizing:border-box;padding:10px 13px;border:1px solid #f1c6bd;border-radius:12px;background:#fff5f2;color:#a33e2b;font-size:13px;font-weight:700;line-height:1.4}.ai-recording-status.is-transcribing{border-color:#d8e3f1;background:#f3f7fc;color:#355b83}.ai-recording-status.is-transcribing .ai-listening-dot{background:#4d83bd;box-shadow:0 0 0 5px rgba(77,131,189,.14)}
 .ai-chat-compose{align-items:center;gap:10px}
 .ai-chat-compose .ai-language{flex:0 0 88px;width:88px;min-width:0;border:1px solid #dfe5df;border-radius:10px;background:#fff;color:#526258;padding:10px 7px;font:inherit;font-size:12px}
 .ai-chat-input-wrap{position:relative;display:flex;align-items:center;flex:1 1 auto;min-width:0}
