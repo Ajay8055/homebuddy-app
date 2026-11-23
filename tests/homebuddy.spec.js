@@ -29,7 +29,7 @@ test('quick add creates a shopping item and persists after reload', async ({ pag
   await page.getByRole('button', { name: /Shopping list/i }).first().click();
   await expect(page.getByText('Buy automation test apples', { exact: true })).toBeVisible();
   await page.reload();
-  await page.getByRole('button', { name: /Shopping list/i }).click();
+  await page.getByRole('button', { name: 'Shopping list', exact: true }).click();
   await expect(page.getByText('Buy automation test apples', { exact: true })).toBeVisible();
 });
 
