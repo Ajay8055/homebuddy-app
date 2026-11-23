@@ -420,7 +420,7 @@ body{background:#f8faf6;color:#26382d}
 .homebuddy-fab{display:none}
 @media(max-width:700px){
  .content{padding:18px 14px calc(100px + env(safe-area-inset-bottom))}
- .welcome{display:none}
+ .welcome{display:block;margin:0 2px 14px;padding:0;border:0;background:transparent;box-shadow:none}.welcome h1{margin:4px 0;font-size:19px;letter-spacing:-.4px;color:#244832}.welcome p{margin:0;font-size:11px;color:#78867b}.welcome .overline{font-size:8px;letter-spacing:1.3px}
  .hb-hero{min-height:176px;margin:2px 0 22px;padding:22px 17px;border-radius:22px}
  .hb-hero-copy{max-width:66%}.hb-eyebrow{font-size:8px;letter-spacing:1.3px}
  .hb-hero h2{font-size:24px;margin:8px 0 6px}.hb-hero p{font-size:11px;line-height:1.45;margin-bottom:15px}
