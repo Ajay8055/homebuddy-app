@@ -25,12 +25,12 @@ test('quick add creates a shopping item and persists after reload', async ({ pag
   const quick = page.getByPlaceholder(/Buy milk, clean the balcony/i);
   await quick.fill('Buy automation test apples');
   await page.getByRole('button', { name: /^Add/ }).last().click();
-  await expect(page.getByText('Buy automation test apples')).toBeVisible();
+  await expect(page.getByText('Buy automation test apples', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: /Shopping list/i }).first().click();
-  await expect(page.getByText('Buy automation test apples')).toBeVisible();
+  await expect(page.getByText('Buy automation test apples', { exact: true })).toBeVisible();
   await page.reload();
   await page.getByRole('button', { name: /Shopping list/i }).click();
-  await expect(page.getByText('Buy automation test apples')).toBeVisible();
+  await expect(page.getByText('Buy automation test apples', { exact: true })).toBeVisible();
 });
 
 test('family calendar can create a recurring event', async ({ page }) => {
