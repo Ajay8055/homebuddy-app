@@ -118,71 +118,16 @@ function Modal({type,close,save,setPage,page,members=[],userId}){
 
 function AssistantChat({supabase,session,household,notice}){
  const [messages,setMessages]=useState([{role:'assistant',content:'Hi! I’m your HomeBuddy assistant. You can ask me in English, Hindi or Hinglish. Try “kal subah 9 baje AC service ka reminder laga do” or “milk aur bread shopping list mein add karo”.'}]);
- const [text,setText]=useState(''),[busy,setBusy]=useState(false),[conversationId,setConversationId]=useState(null),[voiceLang,setVoiceLang]=useState('hi-IN'),[listening,setListening]=useState(false),[docFile,setDocFile]=useState(null),[docName,setDocName]=useState(''),[docCategory,setDocCategory]=useState('Other'),[uploadBusy,setUploadBusy]=useState(false),recognitionRef=useRef(null),silenceTimerRef=useRef(null),discardVoiceOnEndRef=useRef(false);
+ const [text,setText]=useState(''),[busy,setBusy]=useState(false),[conversationId,setConversationId]=useState(null),[voiceLang,setVoiceLang]=useState('hi-IN'),[listening,setListening]=useState(false),[transcribing,setTranscribing]=useState(false),[docFile,setDocFile]=useState(null),[docName,setDocName]=useState(''),[docCategory,setDocCategory]=useState('Other'),[uploadBusy,setUploadBusy]=useState(false),mediaRecorderRef=useRef(null),mediaStreamRef=useRef(null),audioChunksRef=useRef([]);
  const storageKey=session?.user?.id&&household?.id?'homebuddy-ai-conversation-'+session.user.id+'-'+household.id:null;
  useEffect(()=>{setMessages([{role:'assistant',content:'Hi! I’m your HomeBuddy assistant. You can ask me in English, Hindi or Hinglish. Try “kal subah 9 baje XYZ ka reminder laga do” or “milk aur bread shopping list mein add karo”.'}]);const stored=storageKey?localStorage.getItem(storageKey):null;setConversationId(stored);if(stored&&supabase&&session)supabase.from('ai_messages').select('role,content').eq('conversation_id',stored).eq('user_id',session.user.id).order('created_at',{ascending:true}).limit(100).then(({data,error})=>{if(!error&&data?.length)setMessages(data.map(m=>({role:m.role==='user'?'user':'assistant',content:m.content})))})},[storageKey]);
  const uploadChatDocument=async()=>{if(!docFile||!docName.trim()||uploadBusy)return;if(!supabase||!session||!household){notice('Sign in to upload documents securely.');return}const allowed=['application/pdf','image/jpeg','image/png','image/webp','application/vnd.openxmlformats-officedocument.wordprocessingml.document'];if(docFile.size>10*1024*1024){notice('File must be 10 MB or smaller.');return}if(!allowed.includes(docFile.type)){notice('Allowed formats: PDF, JPG, PNG, WEBP and DOCX.');return}setUploadBusy(true);try{const path=household.id+'/'+session.user.id+'/'+crypto.randomUUID()+'-'+docFile.name.replace(/[^a-zA-Z0-9._-]/g,'_');const {error:up}=await supabase.storage.from('homebuddy-documents').upload(path,docFile,{contentType:docFile.type,upsert:false});if(up)throw up;const {error:row}=await supabase.from('household_documents').insert({household_id:household.id,name:docName.trim(),category:docCategory,storage_path:path,mime_type:docFile.type,file_size:docFile.size,uploaded_by:session.user.id});if(row){await supabase.storage.from('homebuddy-documents').remove([path]);throw row}setMessages(m=>[...m,{role:'assistant',content:'Uploaded “'+docName.trim()+'” to your Document Vault. I can search its details, but I do not read the file contents.'}]);setDocFile(null);setDocName('');setDocCategory('Other');notice('Document uploaded to your household vault.')}catch(e){notice('Document upload failed: '+(e?.message||'Please try again.'))}finally{setUploadBusy(false)}};
  const clearVoiceTimer=()=>{if(silenceTimerRef.current){clearTimeout(silenceTimerRef.current);silenceTimerRef.current=null}};
- const stopVoice=()=>{clearVoiceTimer();try{recognitionRef.current?.stop()}catch{}};
- useEffect(()=>()=>{clearVoiceTimer();try{recognitionRef.current?.abort()}catch{}recognitionRef.current=null},[]);
- const startVoice=()=>{
-  if(listening){stopVoice();return}
-  if(busy||recognitionRef.current)return;
-  const Speech=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(!Speech){notice('Speech recognition is not supported in this browser. Please use Chrome or Edge, or your keyboard microphone.');return}
-  if(!window.isSecureContext){notice('Voice input requires a secure HTTPS connection. Open the HomeBuddy HTTPS address and try again.');return}
-  const recognition=new Speech();
-  let finalTranscript='';
-  let latestInterim='';
-  let hadError=false;
-  const prefix=text.trim();
-  recognitionRef.current=recognition;
-  recognition.lang=voiceLang;
-  recognition.interimResults=true;
-  recognition.continuous=false;
-  recognition.maxAlternatives=1;
-  recognition.onstart=()=>{setListening(true);notice('Listening… Speak now. HomeBuddy will stop after a short pause. Review your text, then tap Send.');};
-  recognition.onresult=e=>{
-   let interim='';
-   for(let i=e.resultIndex;i<e.results.length;i++){
-    const part=e.results[i]?.[0]?.transcript||'';
-    if(e.results[i].isFinal)finalTranscript+=part;
-    else interim+=part;
-   }
-   latestInterim=interim;
-   const combined=[prefix,finalTranscript,latestInterim].filter(Boolean).join(' ').trim();
-   if(combined)setText(combined);
-   clearVoiceTimer();
-   silenceTimerRef.current=setTimeout(()=>{
-    if(recognitionRef.current===recognition){try{recognition.stop()}catch{}}
-   },2200);
-  };
-  recognition.onerror=e=>{
-   hadError=true;
-   clearVoiceTimer();
-   setListening(false);
-   const errors={
-    'not-allowed':'Microphone permission is blocked. Allow microphone access for HomeBuddy in your browser settings.',
-    'service-not-allowed':'Speech recognition service is blocked by the browser.',
-    'audio-capture':'No microphone was found. Connect or enable a microphone and try again.',
-    'no-speech':'No speech detected. Tap the mic and speak clearly.',
-    'network':'Speech recognition network service failed. Check your internet connection and try again.',
-    'language-not-supported':'This browser does not support the selected voice language.',
-    'aborted':'Voice input was cancelled.'
-   };
-   if(e.error!=='aborted')notice(errors[e.error]||('Voice recognition failed: '+(e.error||'unknown error')+'. Please try again.'));
-  };
-  recognition.onend=()=>{
-   clearVoiceTimer();
-   setListening(false);
-   if(recognitionRef.current===recognition)recognitionRef.current=null;
-   if(discardVoiceOnEndRef.current){discardVoiceOnEndRef.current=false;return}
-   const message=[prefix,finalTranscript.trim(),latestInterim.trim()].filter(Boolean).join(' ').trim();
-   if(message)setText(message);
-   else if(!hadError)notice('I did not catch that. Tap the mic and try again.');
-  };
-  try{recognition.start()}catch(e){clearVoiceTimer();recognitionRef.current=null;setListening(false);notice('Could not start the microphone: '+(e?.message||'Please check microphone permission.'))}
- };
+ const releaseMicrophone=()=>{mediaStreamRef.current?.getTracks().forEach(track=>track.stop());mediaStreamRef.current=null;mediaRecorderRef.current=null};
+ const transcribeRecording=async(blob)=>{setTranscribing(true);try{if(!blob.size)throw new Error('The recording is empty. Please try again.');if(blob.size>5*1024*1024)throw new Error('Recording is over 5 MB. Please record a shorter message.');const form=new FormData();form.append('audio',blob,'homebuddy-voice.'+(blob.type.includes('mp4')?'mp4':blob.type.includes('ogg')?'ogg':'webm'));form.append('language',voiceLang);const {data,error}=await supabase.functions.invoke('homebuddy-transcribe',{body:form});if(error)throw error;if(data?.error)throw new Error(data.error);const transcript=String(data?.transcript||'').trim();if(!transcript)throw new Error("I couldn't hear clear speech. Please try again.");setText(v=>(v.trim()?v.trim()+' ':'')+transcript);notice('Transcription ready. Review or edit the text, then tap Send.')}catch(e){notice('Voice transcription failed: '+(e?.message||'Please try again.'))}finally{setTranscribing(false);releaseMicrophone()}};
+ const stopVoice=()=>{const recorder=mediaRecorderRef.current;if(recorder&&recorder.state!=='inactive')recorder.stop()};
+ useEffect(()=>()=>{try{if(mediaRecorderRef.current?.state!=='inactive')mediaRecorderRef.current?.stop()}catch{}releaseMicrophone()},[]);
+ const startVoice=async()=>{if(busy||transcribing||mediaRecorderRef.current)return;if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder){notice('Audio recording is not supported in this browser. Please use the latest Chrome, Edge or Safari.');return}if(!window.isSecureContext){notice('Voice input requires a secure HTTPS connection.');return}try{const stream=await navigator.mediaDevices.getUserMedia({audio:true});mediaStreamRef.current=stream;const types=['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg;codecs=opus'];const mimeType=types.find(t=>MediaRecorder.isTypeSupported?.(t));const recorder=mimeType?new MediaRecorder(stream,{mimeType}):new MediaRecorder(stream);mediaRecorderRef.current=recorder;audioChunksRef.current=[];recorder.ondataavailable=e=>{if(e.data?.size)audioChunksRef.current.push(e.data)};recorder.onerror=()=>{notice('Recording failed. Please check microphone access and try again.');releaseMicrophone();setListening(false)};recorder.onstop=()=>{const blob=new Blob(audioChunksRef.current,{type:recorder.mimeType||'audio/webm'});audioChunksRef.current=[];setListening(false);releaseMicrophone();void transcribeRecording(blob)};recorder.start(1000);setListening(true);notice('Recording… Take your time. Tap Stop when you have finished speaking.')}catch(e){releaseMicrophone();setListening(false);const message=e?.name==='NotAllowedError'?'Microphone permission was denied. Allow microphone access in your browser settings.':e?.name==='NotFoundError'?'No microphone was found. Connect or enable a microphone and try again.':'Could not start recording: '+(e?.message||'Please check microphone permission.');notice(message)}};
  const send=async(voiceMessage)=>{
   const message=(voiceMessage??text).trim();if(!message||busy)return;
   if(recognitionRef.current&&voiceMessage===undefined){discardVoiceOnEndRef.current=true;stopVoice();}
@@ -201,7 +146,7 @@ function AssistantChat({supabase,session,household,notice}){
  return <section className="panel full ai-chat-panel">
   <div className="toolbar"><div><h2>HomeBuddy AI</h2><p className="sub">Your household assistant · English · हिन्दी · Hinglish</p></div><span className="report-chip">Conversational assistant</span></div>
   <div className="ai-chat-messages" aria-live="polite">{messages.map((m,i)=><div key={i} className={'ai-message '+(m.role==='user'?'ai-user':'ai-assistant')}><small>{m.role==='user'?'You':'HomeBuddy'}</small><p>{m.content}</p></div>)}{busy&&<div className="ai-message ai-assistant"><small>HomeBuddy</small><p>Thinking…</p></div>}</div>
-  <form className="ai-chat-compose" onSubmit={e=>{e.preventDefault();send()}}><select className="ai-language" aria-label="Voice language" value={voiceLang} onChange={e=>setVoiceLang(e.target.value)}><option value="hi-IN">हिन्दी</option><option value="en-IN">English</option></select><div className="ai-chat-input-wrap"><input aria-label="Message HomeBuddy" value={text} onChange={e=>setText(e.target.value)} placeholder="Message HomeBuddy…" maxLength={4000}/><button type="button" className="ai-mic-icon" onClick={listening?stopVoice:startVoice} aria-label={listening?"Stop voice input":"Speak a message"} title={listening?"Stop listening":"Speak"}>{listening?<StopCircle size={19}/>:<Mic size={19}/>}</button></div><button className="primary ai-send-button" disabled={busy||!text.trim()} aria-label="Send message"><Send size={17}/><span>Send</span></button></form>
+  <form className="ai-chat-compose" onSubmit={e=>{e.preventDefault();send()}}><select className="ai-language" aria-label="Voice language" value={voiceLang} onChange={e=>setVoiceLang(e.target.value)}><option value="hi-IN">हिन्दी</option><option value="en-IN">English</option></select><div className="ai-chat-input-wrap"><input aria-label="Message HomeBuddy" value={text} onChange={e=>setText(e.target.value)} placeholder="Message HomeBuddy…" maxLength={4000}/><button type="button" className="ai-mic-icon" onClick={listening?stopVoice:startVoice} disabled={transcribing||busy} aria-label={listening?"Stop voice recording":transcribing?"Transcribing voice":"Record a voice message"} title={listening?"Stop recording":transcribing?"Transcribing…":"Record voice"}>{listening?<StopCircle size={19}/>:transcribing?<RefreshCw size={19}/>:<Mic size={19}/>}</button></div><button className="primary ai-send-button" disabled={busy||!text.trim()} aria-label="Send message"><Send size={17}/><span>Send</span></button></form>
   <div className="ai-chat-document"><label className="ai-doc-pick">Attach a document<input type="file" accept=".pdf,.jpg,.jpeg,.png,.webp,.docx" onChange={e=>{const file=e.target.files?.[0]||null;setDocFile(file);if(file&&!docName.trim())setDocName(file.name.replace(/\.[^.]+$/,""))}}/></label>{docFile&&<><input aria-label="Uploaded document name" value={docName} onChange={e=>setDocName(e.target.value)} placeholder="Document name"/><select aria-label="Uploaded document category" value={docCategory} onChange={e=>setDocCategory(e.target.value)}>{["Other","Warranty","Insurance","Utility bill","Receipt","Identity","Property","Medical","Vehicle"].map(v=><option key={v}>{v}</option>)}</select><button type="button" className="primary" onClick={uploadChatDocument} disabled={uploadBusy||!docName.trim()}>{uploadBusy?"Uploading…":"Upload to Vault"}</button></>}</div><p className="sub ai-chat-foot">The assistant creates real household records only after server-side validation. It will ask if a request is unclear or looks duplicated. Document uploads go to your private household vault.</p>
  </section>
 }
