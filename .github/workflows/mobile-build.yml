@@ -1,0 +1,81 @@
+name: HomeBuddy native builds
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'index.html'
+      - 'package.json'
+      - 'capacitor.config.ts'
+      - 'vite.config.js'
+      - '.github/workflows/mobile-build.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  android:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Install dependencies and build web app
+        run: |
+          npm install
+          npm run build
+      - name: Generate Android project and sync
+        run: |
+          npx cap add android
+          npx cap sync android
+      - name: Build debug APK
+        working-directory: android
+        run: ./gradlew assembleDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: HomeBuddy-Android-debug-APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+
+  ios:
+    name: Build iOS Simulator app
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies and build web app
+        run: |
+          npm install
+          npm run build
+      - name: Generate iOS project and sync
+        run: |
+          npx cap add ios
+          npx cap sync ios
+      - name: Build unsigned iOS Simulator app
+        run: |
+          xcodebuild -workspace ios/App/App.xcworkspace \
+            -scheme App \
+            -sdk iphonesimulator \
+            -configuration Debug \
+            -derivedDataPath build/ios \
+            CODE_SIGNING_ALLOWED=NO build
+          cd build/ios/Build/Products/Debug-iphonesimulator
+          ditto -c -k --sequesterRsrc --keepParent App.app HomeBuddy-iOS-Simulator.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: HomeBuddy-iOS-Simulator-App
+          path: build/ios/Build/Products/Debug-iphonesimulator/HomeBuddy-iOS-Simulator.zip
+          if-no-files-found: error
