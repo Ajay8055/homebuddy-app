@@ -453,3 +453,10 @@ body{background:#f8faf6;color:#26382d}
  .hb-tiles{grid-template-columns:repeat(3,minmax(0,1fr))}
 }
 @media(max-width:360px){.hb-mascot{width:108px;flex-basis:108px}.hb-hero-copy{max-width:69%}.hb-hero h2{font-size:21px}.hb-tile b{font-size:9px}}
+
+
+.stat-link{width:100%;text-align:left;font:inherit;color:inherit;cursor:pointer;transition:transform .16s ease,box-shadow .16s ease}
+.stat-link:hover{transform:translateY(-2px);box-shadow:0 9px 22px rgba(31,55,37,.09);border-color:#cbdacb}
+.stat-link:focus-visible{outline:3px solid #8ba98e;outline-offset:3px}
+.stat-link em{font-size:10px;color:#64816b;font-style:normal;display:block;margin-top:7px}
+.hb-spending-summary{margin:0 0 16px}
