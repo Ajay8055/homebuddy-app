@@ -175,8 +175,21 @@ Deno.serve(async req=>{
   const now=new Date().toLocaleString("en-IN",{timeZone:"Asia/Kolkata"});
   const system="You are HomeBuddy, a household assistant in India. Current Asia/Kolkata date/time: "+now+". Understand English, Hindi and Hinglish; reply in the user's language. Convert relative dates accurately using the current date/time; pass YYYY-MM-DD dates and ISO 8601 timestamps with +05:30 offset. Never guess amounts, dates, times or people. Ask one short clarification if required information is missing. Use tools to execute clear low-risk requests and never claim success unless the tool confirms it. Adding a bill only records a due item and does not pay it. Never delete a record or mark a bill paid unless you first ask the user to confirm and the user confirms in their next message. This includes deleting a Document Vault file and its stored object. Never transfer ownership or change memberships. Use private expense tool only when user explicitly means personal/private; shared expenses are visible to family. Ask the user before retrying duplicates. Document search returns metadata only, not file contents. Document upload is performed by the chat attachment control, not an AI tool; when asked to upload, tell the user to attach the file and enter its document name/category. Be concise.";
   const payload={model,temperature:0.1,messages:[{role:"system",content:system},...(history||[]).map(m=>({role:m.role==="tool"?"assistant":m.role,content:m.content}))],tools:definitions,tool_choice:"auto"};
-  const response=await fetch(base+"/chat/completions",{method:"POST",headers:{"Authorization":"Bearer "+key,"Content-Type":"application/json"},body:JSON.stringify(payload),signal:AbortSignal.timeout(25000)});
-  if(!response.ok){console.error("AI provider status",response.status);return out({conversationId,error:"AI provider is temporarily unavailable. Please retry shortly."},502);}
+  let response:Response;
+  try{
+   response=await fetch(base+"/chat/completions",{method:"POST",headers:{"Authorization":"Bearer "+key,"Content-Type":"application/json"},body:JSON.stringify(payload),signal:AbortSignal.timeout(25000)});
+  }catch(e){
+   console.error("AI_PROVIDER_NETWORK_ERROR",JSON.stringify({name:e instanceof Error?e.name:"unknown",message:e instanceof Error?e.message:"request failed",host:(()=>{try{return new URL(base).host}catch{return "invalid-base-url"}})(),model}));
+   return out({conversationId,error:"HomeBuddy AI could not reach the AI provider. Please retry in a moment."},503);
+  }
+  if(!response.ok){
+   const raw=await response.text();let providerError:Record<string,unknown>={};
+   try{const parsed=JSON.parse(raw);providerError=parsed?.error||parsed||{};}catch{}
+   const safe=(v:unknown)=>String(v||"").replaceAll(key,"[redacted]").replace(/Bearer\\s+\\S+/gi,"Bearer [redacted]").slice(0,500);
+   console.error("AI_PROVIDER_HTTP_ERROR",JSON.stringify({status:response.status,code:safe(providerError.code),type:safe(providerError.type),message:safe(providerError.message),host:(()=>{try{return new URL(base).host}catch{return "invalid-base-url"}})(),model}));
+   const message=response.status===401||response.status===403?"HomeBuddy AI provider authentication failed. Please check the AI provider key configuration.":response.status===429?"HomeBuddy AI provider quota or rate limit reached. Please check provider usage and billing.":response.status===404?"HomeBuddy AI model or API endpoint was not found. Please check AI_MODEL and AI_BASE_URL.":"HomeBuddy AI provider is temporarily unavailable. Please retry shortly.";
+   return out({conversationId,error:message},502);
+  }
   const completion=await response.json(),assistant=completion?.choices?.[0]?.message||{},calls=assistant.tool_calls||[],results=[];
   for(const call of calls.slice(0,3)){
    const n=call?.function?.name;if(!definitions.some(t=>t.function.name===n))continue;let args;try{args=JSON.parse(call.function.arguments||"{}");}catch{results.push({error:"Invalid action details. Please rephrase."});continue;}
